@@ -57,4 +57,4 @@ ICM intelligence mapping
 
 ## CURRENT NEXT
 
-Validate the evidence retrieval brick: procurement pages → embedding → reranking → top evidence passage. No UI or reasoning layer until this earns PASS.
+Run Evidence Retrieval V0 on the fixed 10-case EuroHPC gold set: source PDF → page-preserving chunks → Nemotron embedding → rerank → metrics. No UI or reasoning layer until this earns PASS.
