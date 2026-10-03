@@ -6,6 +6,8 @@
 - Nemotron Parse: https://build.nvidia.com/nvidia/nemotron-parse
 - Nemotron OCR v2: https://build.nvidia.com/nvidia/nemotron-ocr-v2
 - NVIDIA Retrieval models: https://build.nvidia.com/explore/retrieval
+- NVIDIA Nemotron 3 Embed 1B catalog entry: https://build.nvidia.com/models?label=Nemotron+Retriever&q=Retrieval
+- NVIDIA Nemotron Rerank VL catalog entry: https://build.nvidia.com/models?q=rerank
 - NVIDIA RAG Blueprint: https://build.nvidia.com/nvidia/build-a-rag-pipeline
 
 ## Nebius official
