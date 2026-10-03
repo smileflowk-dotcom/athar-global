@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Build and test output
+dist/
+build/
+.next/
+coverage/
+.pytest_cache/
+.mypy_cache/
+
+# Local tooling and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Logs and local data
+*.log
+.cache/
+data/local/
