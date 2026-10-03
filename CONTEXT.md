@@ -53,8 +53,8 @@ IMPORTANT: These are candidates, not confirmed architecture decisions. Do not ma
 
 ## CURRENT PHASE
 
-ICM bootstrap
+ICM intelligence mapping
 
 ## CURRENT NEXT
 
-Map official NVIDIA + Nebius capabilities relevant to ATHAR Global before implementation.
+Validate the evidence retrieval brick: procurement pages → embedding → reranking → top evidence passage. No UI or reasoning layer until this earns PASS.
