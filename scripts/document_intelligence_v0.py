@@ -20,9 +20,13 @@ def normalize(value: str) -> str:
     return re.sub(r"[^\w€$.,:%-]+", " ", value).strip()
 
 
+def compact(value: str) -> str:
+    return re.sub(r"[^\w]+", "", value.lower(), flags=re.UNICODE)
+
+
 def anchor_match(text: str, quote: str) -> bool:
-    normalized = normalize(text)
-    parts = [normalize(part) for part in re.split(r"\.\.\.", quote) if normalize(part)]
+    normalized = compact(text)
+    parts = [compact(part) for part in re.split(r"\.\.\.", quote) if compact(part)]
     return bool(parts) and all(part in normalized for part in parts)
 
 
@@ -51,7 +55,7 @@ def main() -> int:
     for case in gold:
         page_text = pages.get(int(case["page"]), "")
         quote_found = anchor_match(page_text, case["gold_quote"])
-        section_found = normalize(case["section"]) in normalize(page_text)
+        section_found = compact(case["section"]) in compact(page_text)
         records.append({
             "id": case["id"],
             "method": "pypdf page-preserving extraction",

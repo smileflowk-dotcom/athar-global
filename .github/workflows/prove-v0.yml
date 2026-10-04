@@ -70,10 +70,16 @@ jobs:
             03-validation/end-to-end-proof-results.jsonl
             03-validation/end-to-end-proof-summary.md
           )
-          if [[ -n "$(git status --porcelain -- "${paths[@]}")" ]]; then
+          existing=()
+          for path in "${paths[@]}"; do
+            if [[ -f "$path" ]]; then
+              existing+=("$path")
+            fi
+          done
+          if ((${#existing[@]})) && [[ -n "$(git status --porcelain -- "${existing[@]}")" ]]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add "${paths[@]}"
+            git add "${existing[@]}"
             git commit -m "ci: record ATHAR PROVE V0 results"
             git push origin HEAD:main
           fi
