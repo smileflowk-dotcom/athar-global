@@ -9,7 +9,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from evidence_retrieval_v0 import chunk_pages, embed_texts, extract_pages, list_model_ids, load_gold, rerank, resolve_model, download_pdf  # noqa: E402
+from evidence_retrieval_v0 import EMBED_MODEL, RERANK_MODEL, chunk_pages, download_pdf, embed_texts, extract_pages, load_gold, rerank  # noqa: E402
 from evidence_reasoning_v0 import chat, parse_json, resolve_chat_model  # noqa: E402
 
 RESULTS_PATH = ROOT / "03-validation" / "end-to-end-proof-results.jsonl"
@@ -23,41 +23,47 @@ def anchor_in(text: str, quote: str) -> bool:
 
 
 def main() -> int:
-    api_key = os.getenv("NEBIUS_API_KEY")
-    if not api_key:
+    nvidia_key = os.getenv("NVIDIA_API_KEY")
+    nebius_key = os.getenv("NEBIUS_API_KEY")
+    if not nvidia_key:
+        print("BLOCKED: NVIDIA_API_KEY missing")
+        return 2
+    if not nebius_key:
         print("BLOCKED: NEBIUS_API_KEY missing")
         return 2
     gold = {row["id"]: row for row in load_gold()}
     selected = [gold["EUROHPC-001"], gold["EUROHPC-003"], gold["EUROHPC-007"]]
-    model_ids = list_model_ids(api_key)
-    embed_model = resolve_model(model_ids, "embed")
-    rerank_model = resolve_model(model_ids, "rerank")
+    model_ids = []
+    from evidence_reasoning_v0 import get_models  # noqa: E402
+    model_ids = get_models(nebius_key)
     chat_model = resolve_chat_model(model_ids)
-    if not embed_model or not rerank_model or not chat_model:
-        print("BLOCKED: required NVIDIA model family unavailable")
+    if not chat_model:
+        print("BLOCKED: no NVIDIA Nemotron chat/reasoning model available")
         return 2
+    embed_model = EMBED_MODEL
+    rerank_model = RERANK_MODEL
 
     download_pdf(selected[0]["source_url"])
     pages = extract_pages()
     chunks = chunk_pages(pages, selected[0]["source_url"], selected[0]["document"])
-    corpus_vectors, _ = embed_texts([chunk["text"] for chunk in chunks], embed_model, api_key)
+    corpus_vectors, _ = embed_texts([chunk["text"] for chunk in chunks], "passage", nvidia_key)
     records = []
     for case in selected:
-        query_vector, _ = embed_texts([case["query"]], embed_model, api_key)
+        query_vector, _ = embed_texts([case["query"]], "query", nvidia_key)
         scores = corpus_vectors @ query_vector[0]
         top5 = []
         for index in np.argsort(-scores)[:5]:
             item = dict(chunks[int(index)])
             item["embedding_score"] = float(scores[int(index)])
             top5.append(item)
-        reranked, _ = rerank(case["query"], top5, rerank_model, api_key)
+        reranked, _ = rerank(case["query"], top5, nvidia_key)
         evidence = "\n\n".join(f"CANDIDATE {i + 1} | page {item['page']}\n{item['text']}" for i, item in enumerate(reranked[:3]))
         requirement = {
             "EUROHPC-001": "The maximum total amount available under this call for tenders is EUR 80,000,000.00.",
             "EUROHPC-003": "Variants to the proposed solution are allowed.",
             "EUROHPC-007": "The tenderer must indicate its country of establishment and provide acceptable supporting evidence.",
         }[case["id"]]
-        raw, request_id = chat(api_key, chat_model, requirement, evidence, case["document"], case["page"])
+        raw, request_id = chat(nebius_key, chat_model, requirement, evidence, case["document"], case["page"])
         parsed = {}
         error = ""
         try:

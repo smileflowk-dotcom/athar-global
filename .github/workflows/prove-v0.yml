@@ -41,6 +41,7 @@ jobs:
 
       - name: Run minimal end-to-end proof
         env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
         run: python scripts/end_to_end_proof_v0.py
 
