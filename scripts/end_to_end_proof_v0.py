@@ -57,7 +57,7 @@ def main() -> int:
             item["embedding_score"] = float(scores[int(index)])
             top5.append(item)
         reranked, _ = rerank(case["query"], top5, nvidia_key)
-        evidence = "\n\n".join(f"CANDIDATE {i + 1} | page {item['page']}\n{item['text']}" for i, item in enumerate(reranked[:3]))
+        evidence = f"CANDIDATE 1 | page {reranked[0]['page']}\n{reranked[0]['text']}"
         requirement = {
             "EUROHPC-001": "The maximum total amount available under this call for tenders is EUR 80,000,000.00.",
             "EUROHPC-003": "Variants to the proposed solution are allowed.",

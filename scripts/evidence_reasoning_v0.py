@@ -60,7 +60,7 @@ def chat(api_key: str, model: str, requirement: str, evidence: str, document: st
         "Do not make claims about fraud, illegality, guilt, or final legal compliance. "
         "Return one JSON object only with exactly these keys: status, finding, evidence, source, reason. "
         "status must be SUPPORTED, CONTRADICTED, or INSUFFICIENT_EVIDENCE. "
-        "Copy the evidence value exactly. Source must include the document title and page number. "
+        "Copy the evidence value exactly; when candidate passages are supplied, evidence must be one contiguous verbatim substring of them, with no paraphrasing or word substitution. Source must include the document title and page number. "
         "Reason must be at most two sentences."
     )
     user = json.dumps({
