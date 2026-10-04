@@ -1,0 +1,59 @@
+name: ATHAR Evidence Retrieval V0
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/evidence_retrieval_v0.py"
+      - "02-hypotheses/evidence-retrieval-runtime-spec.md"
+      - "03-validation/evidence-retrieval-gold.jsonl"
+      - "requirements.txt"
+      - "tools/nvidia/README.md"
+      - "tools/nebius/README.md"
+      - ".github/workflows/evidence-retrieval-v0.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Evidence Retrieval V0 benchmark
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+        run: python scripts/evidence_retrieval_v0.py
+
+      - name: Upload benchmark outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-retrieval-v0-results
+          if-no-files-found: ignore
+          path: |
+            03-validation/evidence-retrieval-results.jsonl
+            03-validation/evidence-retrieval-summary.md
+
+      - name: Commit benchmark outputs to main
+        if: always()
+        shell: bash
+        run: |
+          if [[ -n "$(git status --porcelain -- 03-validation/evidence-retrieval-results.jsonl 03-validation/evidence-retrieval-summary.md)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add 03-validation/evidence-retrieval-results.jsonl 03-validation/evidence-retrieval-summary.md
+            git commit -m "ci: record ATHAR evidence retrieval V0 results"
+            git push origin HEAD:main
+          fi
