@@ -12,7 +12,11 @@ import numpy as np
 import requests
 from pypdf import PdfReader
 
-BASE_URL = "https://api.tokenfactory.nebius.com/v1"
+NVIDIA_EMBED_URL = "https://integrate.api.nvidia.com/v1/embeddings"
+NVIDIA_RERANK_URL = "https://ai.api.nvidia.com/v1/retrieval/nvidia/llama-nemotron-rerank-vl-1b-v2/reranking"
+EMBED_MODEL = "nvidia/llama-nemotron-embed-vl-1b-v2"
+RERANK_MODEL = "nvidia/llama-nemotron-rerank-vl-1b-v2"
+
 ROOT = Path(__file__).resolve().parents[1]
 GOLD_PATH = ROOT / "03-validation" / "evidence-retrieval-gold.jsonl"
 RESULTS_PATH = ROOT / "03-validation" / "evidence-retrieval-results.jsonl"
@@ -21,52 +25,24 @@ PDF_PATH = ROOT / ".cache" / "evidence-retrieval-source.pdf"
 
 CHUNK_CHARS = 1800
 CHUNK_OVERLAP = 250
-EMBED_BATCH = 32
+EMBED_BATCH = 16
 
 def blocked(msg: str) -> None:
     print(f"BLOCKED: {msg}")
     sys.exit(2)
 
-def auth_headers(api_key: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+def headers(api_key: str) -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
 
-def api_get(path: str, api_key: str) -> dict[str, Any]:
-    r = requests.get(f"{BASE_URL}{path}", headers=auth_headers(api_key), timeout=60)
-    if r.status_code >= 400:
-        blocked(f"GET {path} failed: HTTP {r.status_code}")
-    return r.json()
-
-def api_post(path: str, payload: dict[str, Any], api_key: str, timeout: int = 180) -> dict[str, Any]:
-    r = requests.post(f"{BASE_URL}{path}", headers=auth_headers(api_key), json=payload, timeout=timeout)
-    if r.status_code >= 400:
-        raise RuntimeError(f"POST {path} failed: HTTP {r.status_code}: {r.text[:500]}")
-    return r.json()
-
-def list_model_ids(api_key: str) -> list[str]:
-    data = api_get("/models", api_key)
-    items = data.get("data") or data.get("models") or []
-    out = []
-    for item in items:
-        if isinstance(item, str):
-            out.append(item)
-        elif isinstance(item, dict):
-            model_id = item.get("id") or item.get("name") or item.get("model")
-            if model_id:
-                out.append(str(model_id))
-    return sorted(set(out))
-
-def resolve_model(ids: list[str], kind: str) -> str:
-    candidates = [(x, x.lower()) for x in ids]
-    patterns = (
-        [("nvidia", "nemotron", "embed"), ("nvidia", "embed"), ("nemotron", "embed")]
-        if kind == "embed"
-        else [("nvidia", "nemotron", "rerank"), ("nvidia", "rerank"), ("nemotron", "rerank")]
-    )
-    for pattern in patterns:
-        for original, low in candidates:
-            if all(token in low for token in pattern):
-                return original
-    return ""
+def post_json(url: str, payload: dict[str, Any], api_key: str, timeout: int = 180) -> dict[str, Any]:
+    response = requests.post(url, headers=headers(api_key), json=payload, timeout=timeout)
+    if response.status_code >= 400:
+        raise RuntimeError(f"POST {url} failed: HTTP {response.status_code}: {response.text[:800]}")
+    return response.json()
 
 def load_gold() -> list[dict[str, Any]]:
     rows = []
@@ -81,10 +57,10 @@ def download_pdf(url: str) -> None:
     PDF_PATH.parent.mkdir(parents=True, exist_ok=True)
     if PDF_PATH.exists() and PDF_PATH.stat().st_size > 10000:
         return
-    r = requests.get(url, timeout=120)
-    if r.status_code >= 400:
-        blocked(f"source PDF unavailable: HTTP {r.status_code}")
-    PDF_PATH.write_bytes(r.content)
+    response = requests.get(url, timeout=120)
+    if response.status_code >= 400:
+        blocked(f"source PDF unavailable: HTTP {response.status_code}")
+    PDF_PATH.write_bytes(response.content)
 
 def extract_pages() -> list[dict[str, Any]]:
     reader = PdfReader(str(PDF_PATH))
@@ -127,11 +103,18 @@ def batches(items: list[str], size: int):
     for i in range(0, len(items), size):
         yield items[i:i + size]
 
-def embed_texts(texts: list[str], model: str, api_key: str) -> tuple[np.ndarray, float]:
+def embed_texts(texts: list[str], input_type: str, api_key: str) -> tuple[np.ndarray, float]:
     vectors = []
     started = time.perf_counter()
     for batch in batches(texts, EMBED_BATCH):
-        data = api_post("/embeddings", {"model": model, "input": batch}, api_key)
+        payload = {
+            "model": EMBED_MODEL,
+            "input": batch,
+            "input_type": input_type,
+            "encoding_format": "float",
+            "truncate": "END",
+        }
+        data = post_json(NVIDIA_EMBED_URL, payload, api_key)
         rows = sorted(data.get("data", []), key=lambda x: x.get("index", 0))
         vectors.extend(row["embedding"] for row in rows)
     latency = time.perf_counter() - started
@@ -142,28 +125,37 @@ def embed_texts(texts: list[str], model: str, api_key: str) -> tuple[np.ndarray,
     norms[norms == 0] = 1
     return arr / norms, latency
 
-def rerank(query: str, docs: list[dict[str, Any]], model: str, api_key: str) -> tuple[list[dict[str, Any]], float]:
+def rerank(query: str, docs: list[dict[str, Any]], api_key: str) -> tuple[list[dict[str, Any]], float]:
     payload = {
-        "model": model,
-        "query": query,
-        "documents": [d["text"] for d in docs],
-        "top_n": len(docs),
-        "return_documents": True,
+        "model": RERANK_MODEL,
+        "query": {"text": query},
+        "passages": [{"text": d["text"]} for d in docs],
+        "truncate": "END",
     }
     started = time.perf_counter()
-    data = api_post("/rerank", payload, api_key)
+    data = post_json(NVIDIA_RERANK_URL, payload, api_key)
     latency = time.perf_counter() - started
-    results = data.get("results") or data.get("data") or []
+
+    rankings = data.get("rankings") or data.get("results") or data.get("data") or []
     out = []
-    for item in results:
+    for item in rankings:
         idx = item.get("index")
         if idx is None:
             continue
-        d = dict(docs[int(idx)])
-        d["rerank_score"] = item.get("relevance_score", item.get("score"))
-        out.append(d)
+        ranked = dict(docs[int(idx)])
+        ranked["rerank_score"] = item.get(
+            "logit",
+            item.get("relevance_score", item.get("score")),
+        )
+        out.append(ranked)
+
     if not out:
-        raise RuntimeError("rerank returned no usable results")
+        raise RuntimeError(f"rerank returned no usable rankings: {json.dumps(data)[:800]}")
+
+    out.sort(
+        key=lambda row: float(row["rerank_score"]) if row["rerank_score"] is not None else float("-inf"),
+        reverse=True,
+    )
     return out, latency
 
 def normalize(text: str) -> str:
@@ -183,20 +175,14 @@ def hit(candidates: list[dict[str, Any]], gold: dict[str, Any], k: int) -> bool:
     )
 
 def main() -> int:
-    api_key = os.getenv("NEBIUS_API_KEY")
+    api_key = os.getenv("NVIDIA_API_KEY")
     if not api_key:
-        blocked("NEBIUS_API_KEY missing")
+        blocked("NVIDIA_API_KEY missing")
 
     gold = load_gold()
-    model_ids = list_model_ids(api_key)
-    embed_model = resolve_model(model_ids, "embed")
-    rerank_model = resolve_model(model_ids, "rerank")
-    print(f"NVIDIA/Nemotron embed model: {embed_model or 'NONE'}")
-    print(f"NVIDIA/Nemotron rerank model: {rerank_model or 'NONE'}")
-    if not embed_model:
-        blocked("required NVIDIA Nemotron embedding family unavailable")
-    if not rerank_model:
-        blocked("required NVIDIA Nemotron rerank family unavailable")
+    print(f"Embedding model: {EMBED_MODEL}")
+    print(f"Rerank model: {RERANK_MODEL}")
+    print("Runtime: NVIDIA hosted NIM endpoints")
 
     download_pdf(gold[0]["source_url"])
     pages = extract_pages()
@@ -204,24 +190,36 @@ def main() -> int:
     if not chunks:
         blocked("no chunks extracted")
 
-    corpus_vectors, corpus_latency = embed_texts([c["text"] for c in chunks], embed_model, api_key)
+    try:
+        corpus_vectors, corpus_latency = embed_texts(
+            [c["text"] for c in chunks],
+            "passage",
+            api_key,
+        )
+    except Exception as exc:
+        blocked(f"NVIDIA embedding call failed: {exc}")
 
     records = []
     query_embed_latency = 0.0
     rerank_latency = 0.0
-    for case in gold:
-        qv, q_latency = embed_texts([case["query"]], embed_model, api_key)
-        query_embed_latency += q_latency
-        scores = corpus_vectors @ qv[0]
-        top_indices = np.argsort(-scores)[:5]
-        top5 = []
-        for idx in top_indices:
-            chunk = dict(chunks[int(idx)])
-            chunk["embedding_score"] = float(scores[int(idx)])
-            top5.append(chunk)
 
-        reranked, r_latency = rerank(case["query"], top5, rerank_model, api_key)
-        rerank_latency += r_latency
+    for case in gold:
+        try:
+            qv, q_latency = embed_texts([case["query"]], "query", api_key)
+            query_embed_latency += q_latency
+            scores = corpus_vectors @ qv[0]
+            top_indices = np.argsort(-scores)[:5]
+
+            top5 = []
+            for idx in top_indices:
+                chunk = dict(chunks[int(idx)])
+                chunk["embedding_score"] = float(scores[int(idx)])
+                top5.append(chunk)
+
+            reranked, r_latency = rerank(case["query"], top5, api_key)
+            rerank_latency += r_latency
+        except Exception as exc:
+            blocked(f"NVIDIA retrieval call failed for {case['id']}: {exc}")
 
         record = {
             "id": case["id"],
@@ -233,10 +231,18 @@ def main() -> int:
             "hit_recall_at_5": hit(top5, case, 5),
             "hit_rerank_recall_at_3": hit(reranked, case, 3),
             "hit_top1": hit(reranked, case, 1),
-            "locator_preserved": all(x.get("source_url") and isinstance(x.get("page"), int) for x in reranked),
+            "locator_preserved": all(
+                x.get("source_url") and isinstance(x.get("page"), int)
+                for x in reranked
+            ),
         }
         records.append(record)
-        print(f"{case['id']}: R@5={record['hit_recall_at_5']} RR@3={record['hit_rerank_recall_at_3']} TOP1={record['hit_top1']}")
+        print(
+            f"{case['id']}: "
+            f"R@5={record['hit_recall_at_5']} "
+            f"RR@3={record['hit_rerank_recall_at_3']} "
+            f"TOP1={record['hit_top1']}"
+        )
 
     n = len(records)
     recall5 = sum(r["hit_recall_at_5"] for r in records) / n
@@ -244,7 +250,14 @@ def main() -> int:
     top1 = sum(r["hit_top1"] for r in records) / n
     locator = sum(r["locator_preserved"] for r in records) / n
     fabricated = 0
-    passed = recall5 >= 0.90 and recall3 >= 0.90 and top1 >= 0.80 and locator == 1.0 and fabricated == 0
+
+    passed = (
+        recall5 >= 0.90
+        and recall3 >= 0.90
+        and top1 >= 0.80
+        and locator == 1.0
+        and fabricated == 0
+    )
     status = "PASS" if passed else "FAIL"
 
     RESULTS_PATH.write_text(
@@ -260,9 +273,9 @@ def main() -> int:
 
 ## Models
 
-- Embed: `{embed_model}`
-- Rerank: `{rerank_model}`
-- Runtime: Nebius Token Factory
+- Embed: `{EMBED_MODEL}`
+- Rerank: `{RERANK_MODEL}`
+- Runtime: NVIDIA hosted NIM endpoints
 
 ## Corpus
 
