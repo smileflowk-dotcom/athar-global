@@ -53,11 +53,23 @@ IMPORTANT: These are candidates, not confirmed architecture decisions. Do not ma
 
 ## CURRENT PHASE
 
-ICM PROVE complete
+Scientific workflow pivot — execution blocked
 
 ## CURRENT NEXT
 
-CONNECT
+Provide a verified NVIDIA GPU execution path, then run the fixed-seed MNIST dropout comparison.
+
+## SCIENTIFIC PIVOT STATUS
+
+- Branch: `hackathon/scientific-workflow-pivot`
+- Paper: *Dropout: A Simple Way to Prevent Neural Networks from Overfitting*
+- GPU runtime: unavailable in the current Codex environment
+- PyTorch: unavailable
+- `nvidia-smi`: unavailable
+- Existing Actions path: `ubuntu-latest` CPU/API workflows only
+- Experiment: not run
+- Metrics: not available
+- NVIDIA execution was not substituted or simulated
 
 ## VERIFIED PROVE STATE
 

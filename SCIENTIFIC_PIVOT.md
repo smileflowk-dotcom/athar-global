@@ -44,3 +44,13 @@ Paper → Claim → Experiment → NVIDIA Run → Compare → Evidence
 ## Stop rule
 
 Do not add features unless they improve the 3-minute hackathon demo.
+
+## Current validation state
+
+RESULT: BLOCKED
+
+The requested MNIST comparison was not executed. This environment has no `NVIDIA_API_KEY`, no `NEBIUS_API_KEY`, no PyTorch installation, and no available `nvidia-smi` GPU runtime. The existing repository Actions workflows run on `ubuntu-latest` and call hosted APIs; they do not provide an NVIDIA GPU execution path.
+
+No paper claim, experiment metric, or NVIDIA run result is recorded until a verified NVIDIA GPU runtime is available.
+
+NEXT: provide an approved NVIDIA GPU execution path already supported by the repository or environment, then run the smallest fixed-seed MNIST dropout comparison.
