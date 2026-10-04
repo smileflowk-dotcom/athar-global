@@ -44,3 +44,16 @@ No gold dataset and no live Nebius/NVIDIA retrieval run have been executed yet.
 ## NEXT
 
 Build the 10-case public procurement gold dataset before implementing the runtime call.
+
+
+## Evaluation correction — PDF spacing artifacts
+
+During the first NVIDIA-hosted run, two retrieved gold passages were on the correct page and contained the correct source text, but PyPDF had inserted spaces inside words (for example `partic ipate` and `subcontr actors`). The evaluator therefore produced false negatives despite successful retrieval.
+
+Correction applied:
+- gold answers unchanged;
+- page constraint unchanged;
+- retrieval candidates unchanged;
+- evaluator now ignores whitespace/punctuation differences when checking the verbatim gold anchor.
+
+This is an evaluator robustness fix, not benchmark tuning.
