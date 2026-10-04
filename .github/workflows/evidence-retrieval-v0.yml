@@ -33,7 +33,7 @@ jobs:
 
       - name: Run Evidence Retrieval V0 benchmark
         env:
-          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
         run: python scripts/evidence_retrieval_v0.py
 
       - name: Upload benchmark outputs
