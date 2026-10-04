@@ -53,8 +53,40 @@ IMPORTANT: These are candidates, not confirmed architecture decisions. Do not ma
 
 ## CURRENT PHASE
 
-ICM intelligence mapping
+ICM PROVE complete
 
 ## CURRENT NEXT
 
-Run Evidence Retrieval V0 on the fixed 10-case EuroHPC gold set: source PDF → page-preserving chunks → Nemotron embedding → rerank → metrics. No UI or reasoning layer until this earns PASS.
+CONNECT
+
+## VERIFIED PROVE STATE
+
+Evidence Retrieval V0: PASS on the fixed 10-case EuroHPC gold set.
+
+- NVIDIA embedding: `nvidia/llama-nemotron-embed-vl-1b-v2`
+- NVIDIA reranking: `nvidia/llama-nemotron-rerank-vl-1b-v2`
+- Recall@5: 1.00
+- Recall@3 after rerank: 1.00
+- Top-1: 0.80
+- Locator preservation: 1.00
+- Fabricated evidence: 0
+
+Document Intelligence V0: PASS for the born-digital demo PDF using the simple `pypdf` baseline.
+
+- Text fidelity: 1.00
+- Structure usefulness: 0.80
+- Locator preservation: 1.00
+- Fabricated evidence: 0
+- NVIDIA Parse/OCR: not selected; benchmark later for scanned or degraded documents.
+
+Evidence Reasoning V0: PASS through Nebius Token Factory.
+
+- Model: `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`
+- Accuracy: 4/5 (0.80)
+- Locator preservation: 5/5
+- Fabricated evidence: 0
+- Unsupported legal conclusions: 0
+
+Minimal end-to-end proof: PASS for 3 representative findings.
+
+The human remains the final decision-maker. No UI, autonomous legal conclusion, fraud accusation, or country-specific rule engine was added.
