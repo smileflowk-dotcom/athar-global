@@ -12,13 +12,13 @@ At least four of five statuses correct, all five document/page locators preserve
 
 - Model: `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`
 - Endpoint: Nebius Token Factory `/v1/chat/completions`
-- Status accuracy: 0.00 (0/5)
-- Locator preservation: 0/5
-- Fabricated evidence: 5
-- Unsupported legal conclusions: 5
+- Status accuracy: 0.80 (4/5)
+- Locator preservation: 5/5
+- Fabricated evidence: 0
+- Unsupported legal conclusions: 0
 
-## RESULT: FAIL
+## RESULT: PASS
 
 ## NEXT
 
-Do not proceed to end-to-end integration; inspect the constrained output failures.
+Run the minimal three-finding end-to-end proof.
