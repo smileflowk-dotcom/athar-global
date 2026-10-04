@@ -17,9 +17,9 @@ Exact source text anchors, page locators, useful section labels, and zero invent
 - Locator preservation: 1.00
 - Fabricated evidence: 0
 
-## RESULT: FAIL
+## RESULT: PASS
 
-The NVIDIA document-intelligence capability remains unselected for this born-digital demo case unless a later scan/table benchmark shows measurable value.
+The NVIDIA document-intelligence capability remains unselected for this born-digital demo case: direct extraction preserved all tested text and locators, while section labels remained useful on at least 80% of cases. Benchmark Parse/OCR later for scanned or degraded documents.
 
 ## NEXT
 
