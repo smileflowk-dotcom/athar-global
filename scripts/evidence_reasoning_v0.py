@@ -72,7 +72,8 @@ def chat(api_key: str, model: str, requirement: str, evidence: str, document: st
     payload = {
         "model": model,
         "temperature": 0,
-        "max_tokens": 300,
+        "max_tokens": 1024,
+        "chat_template_kwargs": {"enable_thinking": False},
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
     }
     response = requests.post(f"{BASE_URL}/chat/completions", headers=headers(api_key), json=payload, timeout=180)
