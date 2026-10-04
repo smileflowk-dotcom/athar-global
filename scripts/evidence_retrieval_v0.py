@@ -164,9 +164,17 @@ def normalize(text: str) -> str:
     return re.sub(r"[^\w€$.,:%-]+", " ", text).strip()
 
 def anchor_match(text: str, quote: str) -> bool:
-    normalized = normalize(text)
-    parts = [normalize(x) for x in re.split(r"\.{3}|…", quote) if normalize(x)]
-    return bool(parts) and all(part in normalized for part in parts)
+    # PDF extraction can introduce spaces inside words (e.g. "partic ipate",
+    # "subcontr actors"). Evaluate verbatim evidence robustly without changing
+    # the gold answer by comparing a whitespace/punctuation-insensitive form.
+    # Page equality is still enforced separately in hit().
+    compact_text = re.sub(r"[^\w]+", "", text.lower(), flags=re.UNICODE)
+    parts = [
+        re.sub(r"[^\w]+", "", x.lower(), flags=re.UNICODE)
+        for x in re.split(r"\.{3}|…", quote)
+        if x.strip()
+    ]
+    return bool(parts) and all(part and part in compact_text for part in parts)
 
 def hit(candidates: list[dict[str, Any]], gold: dict[str, Any], k: int) -> bool:
     return any(
