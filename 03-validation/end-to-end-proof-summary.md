@@ -10,10 +10,10 @@
 - Rerank: `nvidia/llama-nemotron-rerank-vl-1b-v2`
 - Reasoning: `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`
 
-## RESULT: FAIL
+## RESULT: PASS
 
 - Findings tested: 3
-- Evidence grounded in retrieved text: 2/3
+- Evidence grounded in retrieved text: 3/3
 - Locator preserved: 3/3
 - Parse errors: 0
 
