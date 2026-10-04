@@ -1,0 +1,79 @@
+name: ATHAR PROVE V0
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/document_intelligence_v0.py"
+      - "scripts/evidence_reasoning_v0.py"
+      - "scripts/end_to_end_proof_v0.py"
+      - "03-validation/evidence-reasoning-gold.jsonl"
+      - "02-hypotheses/document-intelligence-v0.md"
+      - "02-hypotheses/evidence-reasoning-v0.md"
+      - "requirements.txt"
+      - ".github/workflows/prove-v0.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate document intelligence baseline
+        run: python scripts/document_intelligence_v0.py
+
+      - name: Validate evidence reasoning
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+        run: python scripts/evidence_reasoning_v0.py
+
+      - name: Run minimal end-to-end proof
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+        run: python scripts/end_to_end_proof_v0.py
+
+      - name: Upload PROVE artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: athar-prove-v0
+          if-no-files-found: ignore
+          path: |
+            03-validation/document-intelligence-results.jsonl
+            03-validation/document-intelligence-summary.md
+            03-validation/evidence-reasoning-results.jsonl
+            03-validation/evidence-reasoning-summary.md
+            03-validation/end-to-end-proof-results.jsonl
+            03-validation/end-to-end-proof-summary.md
+
+      - name: Commit PROVE artifacts to main
+        if: always()
+        shell: bash
+        run: |
+          paths=(
+            03-validation/document-intelligence-results.jsonl
+            03-validation/document-intelligence-summary.md
+            03-validation/evidence-reasoning-results.jsonl
+            03-validation/evidence-reasoning-summary.md
+            03-validation/end-to-end-proof-results.jsonl
+            03-validation/end-to-end-proof-summary.md
+          )
+          if [[ -n "$(git status --porcelain -- "${paths[@]}")" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "${paths[@]}"
+            git commit -m "ci: record ATHAR PROVE V0 results"
+            git push origin HEAD:main
+          fi
