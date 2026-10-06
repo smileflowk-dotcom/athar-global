@@ -30,6 +30,7 @@ Before implementing a NVIDIA/Nebius capability, read the matching repository ski
 - document parsing/OCR → `skills/document-intelligence.md`
 - reasoning over evidence → `skills/evidence-reasoning.md`
 - any benchmark / promotion decision → `skills/benchmark.md`
+- moisture-swing CO2 discovery / ranking / promotion → `skills/moisture-swing-scientific-screening.md`
 
 Authoritative tool maps:
 - `tools/nvidia/README.md`
