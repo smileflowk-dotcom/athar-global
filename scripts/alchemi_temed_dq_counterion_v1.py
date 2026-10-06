@@ -64,8 +64,7 @@ for name,smi in ANIONS.items():
     for label,dist in [("close",4.0),("far",14.0)]:
         pos,z=complex_geometry(smi,dist)
         b=make_batch(pos,z)
-        for h in model.make_neighbor_hooks():
-            h(b)
+        compute_neighbors(b, config=model.model_config.neighbor_config)
         t=time.perf_counter()
         with torch.no_grad():
             o=model(b)
