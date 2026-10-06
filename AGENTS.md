@@ -36,3 +36,10 @@ Authoritative tool maps:
 - `tools/nebius/README.md`
 
 Do not select or install a model merely because it exists. Every component must earn integration through validation.
+
+
+## Project memory
+
+Before planning or changing the scientific pivot, read `PROJECT_MEMORY.md`.
+After any meaningful verified change, update it with only durable decisions, verified facts, failed paths, current state, and next action.
+Keep it concise; do not use it as a raw log.
