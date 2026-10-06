@@ -14,9 +14,21 @@ Use for any CO2 moisture-swing candidate generation, ranking, promotion, or vali
 
 ## REQUIRED ORDER
 
-DATA → VALIDATE MODEL → ESTIMATE UNCERTAINTY → ACQUIRE → FEASIBILITY → ATOMISTIC CHECK → INDEPENDENT CROSS-CHECK → LAB
+READ PRIOR STATE → DATA/EVIDENCE → VALIDATE MODEL → ESTIMATE UNCERTAINTY → ACQUIRE → FEASIBILITY → ATOMISTIC CHECK → INDEPENDENT CROSS-CHECK → LAB
 
 Do not reorder this sequence without a documented reason.
+
+## CONTINUITY RULE
+
+Never restart a broad discovery search simply because a new tool or protocol was added.
+
+For each proposed step, state:
+- what is already known;
+- what remains uncertain;
+- why this step reduces that uncertainty;
+- what decision will change depending on the result.
+
+If those four points cannot be stated, do not run the step.
 
 ## DECISION RULES
 
@@ -28,6 +40,8 @@ Do not reorder this sequence without a documented reason.
 - Record uncertainty and out-of-distribution risk.
 - Use active learning to choose the next informative candidates or experiments.
 - Keep at least one known control/reference in every batch.
+- For the current project, treat phosphate-derived chemistries as the priority family and carbonate as the control unless new evidence justifies changing that priority.
+- Do not interpret "priority" as "validated winner"; preserve justified non-phosphate comparators.
 
 ## ACTIVE LEARNING
 
