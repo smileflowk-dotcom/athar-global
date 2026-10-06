@@ -1,0 +1,58 @@
+name: MSA Phosphate Gate A V0
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/msa_phosphate_gate_a_v0.py"
+      - ".github/workflows/msa-phosphate-gate-a-v0.yml"
+jobs:
+  gate-a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax check
+        run: python -m py_compile scripts/msa_phosphate_gate_a_v0.py
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas openpyxl scikit-learn lightgbm requests
+      - name: Run grouped Gate A + phosphate coverage audit
+        run: python scripts/msa_phosphate_gate_a_v0.py
+      - name: NVIDIA Nemotron evidence audit
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json, os, requests
+          from pathlib import Path
+          p=Path("03-validation/msa-phosphate-gate-a-v0.json")
+          report=json.loads(p.read_text())
+          payload={
+            "model":"nvidia/nemotron-3-super-120b-a12b",
+            "messages":[
+              {"role":"system","content":"You are a scientific evidence auditor. Do not invent chemistry, do not call candidates validated, and distinguish dataset evidence from physical validation."},
+              {"role":"user","content":"Audit this moisture-swing Gate A report. Return JSON only with keys: gate_a_interpretation, phosphate_coverage_interpretation, biggest_uncertainty, next_test, forbidden_claims. Report:\n"+json.dumps(report)}
+            ],
+            "temperature":0.1
+          }
+          r=requests.post("https://api.tokenfactory.nebius.com/v1/chat/completions",
+            headers={"Authorization":"Bearer "+os.environ["NEBIUS_API_KEY"],"Content-Type":"application/json"},
+            json=payload,timeout=180)
+          r.raise_for_status()
+          out=r.json()["choices"][0]["message"]["content"]
+          Path("03-validation/msa-phosphate-gate-a-v0-nemotron-audit.json").write_text(out,encoding="utf-8")
+          print(out)
+          PY
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msa-phosphate-gate-a-v0
+          path: |
+            03-validation/msa-phosphate-gate-a-v0.json
+            03-validation/msa-phosphate-gate-a-v0-nemotron-audit.json
+          if-no-files-found: ignore
