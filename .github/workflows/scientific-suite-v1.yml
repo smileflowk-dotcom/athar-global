@@ -1,0 +1,41 @@
+name: ATHAR Scientific Suite V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - hackathon/scientific-workflow-pivot
+    paths:
+      - "scripts/scientific_suite_v1.py"
+      - ".github/workflows/scientific-suite-v1.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install CPU scientific runtime
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install requests
+      - name: Run two additional claim reproductions
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+        run: python scripts/scientific_suite_v1.py
+      - name: Upload evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scientific-suite-v1
+          if-no-files-found: error
+          path: |
+            03-validation/scientific-suite-v1.json
+            03-validation/scientific-suite-v1.md
