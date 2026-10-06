@@ -1,0 +1,30 @@
+name: NVIDIA ALCHEMI Efficient Panel V3
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/alchemi_efficient_panel_v3.py"
+      - ".github/workflows/alchemi-efficient-panel-v3.yml"
+jobs:
+  panel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax check
+        run: python -m py_compile scripts/alchemi_efficient_panel_v3.py
+      - name: Install scientific stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install "nvalchemi-toolkit[aimnet]" rdkit
+      - name: Run efficient 24-condition panel
+        run: python scripts/alchemi_efficient_panel_v3.py
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alchemi-efficient-panel-v3
+          path: 03-validation/alchemi-efficient-panel-v3.json
+          if-no-files-found: ignore
