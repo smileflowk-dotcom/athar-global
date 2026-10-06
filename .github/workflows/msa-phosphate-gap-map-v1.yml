@@ -1,0 +1,51 @@
+name: MSA Phosphate Gap Map V1
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/msa_phosphate_gap_map_v1.py"
+      - ".github/workflows/msa-phosphate-gap-map-v1.yml"
+jobs:
+  gap-map:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install pandas openpyxl requests
+      - name: Build phosphate gap map
+        run: python scripts/msa_phosphate_gap_map_v1.py
+      - name: NVIDIA Nemotron audit
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+        run: |
+          python - <<'PY'
+          import json, os, requests
+          from pathlib import Path
+          report=json.loads(Path('03-validation/msa-phosphate-gap-map-v1.json').read_text())
+          payload={
+            'model':'nvidia/nemotron-3-super-120b-a12b',
+            'messages':[
+              {'role':'system','content':'You are a scientific evidence auditor. Do not invent missing literature evidence or call any candidate validated.'},
+              {'role':'user','content':'Audit this phosphate gap map. Identify the 3 most decision-useful exact resin+ion gaps for the next uncertainty/OOD test. Prefer rows with matched carbonate control and interpretable architecture. Return JSON only with keys top3, why, risks, next_test. Report:\n'+json.dumps(report)}
+            ],
+            'temperature':0.1
+          }
+          r=requests.post('https://api.tokenfactory.nebius.com/v1/chat/completions',headers={'Authorization':'Bearer '+os.environ['NEBIUS_API_KEY'],'Content-Type':'application/json'},json=payload,timeout=180)
+          r.raise_for_status()
+          out=r.json()['choices'][0]['message']['content']
+          Path('03-validation/msa-phosphate-gap-map-v1-nemotron.json').write_text(out,encoding='utf-8')
+          print(out)
+          PY
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msa-phosphate-gap-map-v1
+          path: |
+            03-validation/msa-phosphate-gap-map-v1.json
+            03-validation/msa-phosphate-gap-map-v1-nemotron.json
+          if-no-files-found: ignore
