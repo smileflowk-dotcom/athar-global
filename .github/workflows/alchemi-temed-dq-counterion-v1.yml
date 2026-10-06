@@ -1,0 +1,28 @@
+name: NVIDIA ALCHEMI TEMED-DQ Counterion V1
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/alchemi_temed_dq_counterion_v1.py"
+      - ".github/workflows/alchemi-temed-dq-counterion-v1.yml"
+jobs:
+  counterion:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install scientific stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install "nvalchemi-toolkit[aimnet]" rdkit
+      - name: Run NVIDIA ALCHEMI AIMNet2 screening
+        run: python scripts/alchemi_temed_dq_counterion_v1.py
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alchemi-temed-dq-counterion-v1
+          path: 03-validation/alchemi-temed-dq-counterion-v1.json
+          if-no-files-found: ignore
