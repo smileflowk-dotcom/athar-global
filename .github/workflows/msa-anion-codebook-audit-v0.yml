@@ -1,0 +1,21 @@
+name: MSA Anion Codebook Audit V0
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/msa_anion_codebook_audit_v0.py"
+      - ".github/workflows/msa-anion-codebook-audit-v0.yml"
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install pandas openpyxl
+      - run: python scripts/msa_anion_codebook_audit_v0.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msa-anion-codebook-audit-v0
+          path: 03-validation/msa-anion-codebook-audit-v0.json
