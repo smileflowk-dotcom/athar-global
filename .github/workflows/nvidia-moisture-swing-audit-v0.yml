@@ -1,0 +1,48 @@
+name: NVIDIA Moisture-Swing Audit V0
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/nvidia_moisture_swing_audit_v0.py"
+      - ".github/workflows/nvidia-moisture-swing-audit-v0.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  nvidia-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests==2.32.5
+      - name: Run NVIDIA NIM audit
+        env:
+          NVIDIA_API_KEY: \${{ secrets.NVIDIA_API_KEY }}
+        run: python scripts/nvidia_moisture_swing_audit_v0.py
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nvidia-moisture-swing-audit-v0
+          path: |
+            03-validation/nvidia-moisture-swing-audit-v0.json
+            03-validation/nvidia-moisture-swing-audit-v0.md
+          if-no-files-found: ignore
+      - name: Commit results
+        if: always()
+        shell: bash
+        run: |
+          files=(03-validation/nvidia-moisture-swing-audit-v0.json 03-validation/nvidia-moisture-swing-audit-v0.md)
+          existing=()
+          for f in "\${files[@]}"; do [[ -f "$f" ]] && existing+=("$f"); done
+          if (("\${#existing[@]}" > 0)) && [[ -n "$(git status --porcelain -- "\${existing[@]}")" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "\${existing[@]}"
+            git commit -m "ci: record NVIDIA moisture-swing audit V0"
+            git push origin HEAD:main
+          fi
