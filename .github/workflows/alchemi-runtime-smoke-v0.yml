@@ -1,0 +1,32 @@
+name: NVIDIA ALCHEMI Runtime Smoke V0
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/alchemi_runtime_smoke_v0.py"
+      - ".github/workflows/alchemi-runtime-smoke-v0.yml"
+
+jobs:
+  alchemi-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install NVIDIA ALCHEMI
+        run: |
+          python -m pip install --upgrade pip
+          pip install nvalchemi-toolkit
+      - name: Run ALCHEMI smoke
+        run: python scripts/alchemi_runtime_smoke_v0.py
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alchemi-runtime-smoke-v0
+          path: |
+            03-validation/alchemi-runtime-smoke-v0.json
+            03-validation/alchemi-runtime-smoke-v0.md
+          if-no-files-found: ignore
