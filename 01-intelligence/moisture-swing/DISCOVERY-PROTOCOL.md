@@ -68,8 +68,9 @@ Required before promoting candidates:
 - inspect learning curve for data limitation / overfitting
 
 Preferred baseline:
-- reproduce the public MSA-ML workflow first
-- compare LightGBM, XGBoost, Random Forest, CatBoost, MLP
+- reuse and reproduce only the parts of the public MSA-ML workflow that reduce uncertainty for the current hypothesis
+- do not restart discovery from zero when prior evidence already identifies a high-value chemical family
+- compare LightGBM, XGBoost, Random Forest, CatBoost, MLP when the dataset supports it
 - use SHAP only after predictive validity is established
 
 ## Active-learning protocol
@@ -138,9 +139,32 @@ A material can be called a lab candidate only after A-E pass.
 ### Gate G — Validated material
 Only laboratory data can validate the material.
 
+## Continuity / no-reset rule
+
+The protocol validates and narrows accumulated evidence; it does not erase it.
+
+Before any new campaign:
+1. read the current project state and prior validated literature findings;
+2. identify exactly which uncertainty the next step reduces;
+3. do not rerun a broad screen if the answer is already established;
+4. do not expand the search space unless the current priority family has been tested against a justified comparator.
+
+## Current priority hypothesis
+
+The phosphate family is a priority evidence-backed region of the search space, not a proven universal winner.
+
+Priority variants already identified:
+- HPO4^2-
+- PO4^3-
+- P2O7^4-
+
+The key open question is not whether phosphate can work in moisture-swing capture. The open question is which combinations of resin/backbone, ammonium or functional-group type, pore architecture, and phosphate-derived counter-ion are underexplored, feasible, and superior under comparable conditions.
+
+Carbonate remains the control/reference and selected non-phosphate families may be retained only as justified comparators.
+
 ## Current status
 
 - V1-V6 are method/infrastructure experiments and must not be treated as a completed discovery campaign.
 - Carbonate remains a control/reference.
 - No new candidate is currently validated.
-- The next scientific step is to reproduce the public MSA-ML baseline and active-learning behavior before broadening atomistic screening.
+- The next step is targeted: build the phosphate-centered candidate space from existing evidence and use ML/uncertainty only to rank or challenge those combinations, not to restart discovery from zero.
