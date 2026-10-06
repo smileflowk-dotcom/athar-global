@@ -6,7 +6,7 @@ import torch
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from nvalchemi.data import AtomicData, Batch
-from nvalchemi.models.aimnet2 import AIMNet2Wrapper
+from nvalchemi.models.aimnet2 import AIMNet2Wrapper\nfrom nvalchemi.neighbors import compute_neighbors
 
 OUT=Path("03-validation"); OUT.mkdir(exist_ok=True)
 device="cuda:0" if torch.cuda.is_available() else "cpu"
