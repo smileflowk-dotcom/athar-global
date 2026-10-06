@@ -1,0 +1,31 @@
+name: NVIDIA ALCHEMI Relaxed Top4 V5
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/alchemi_relaxed_top4_v5.py"
+      - ".github/workflows/alchemi-relaxed-top4-v5.yml"
+jobs:
+  relaxed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax check
+        run: python -m py_compile scripts/alchemi_relaxed_top4_v5.py
+      - name: Install scientific stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install "nvalchemi-toolkit[aimnet]" rdkit
+      - name: Run convergence-filtered relaxed validation
+        run: python scripts/alchemi_relaxed_top4_v5.py
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alchemi-relaxed-top4-v5
+          path: 03-validation/alchemi-relaxed-top4-v5-convergence-filtered.json
+          if-no-files-found: ignore
