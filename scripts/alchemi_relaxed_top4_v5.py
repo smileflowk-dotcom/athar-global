@@ -185,11 +185,19 @@ for cand in CANDIDATES:
 
     lo = summary[cand]["low_2h2o"]["median_delta_eV"]
     hi = summary[cand]["high_6h2o"]["median_delta_eV"]
+    low_pairs = summary[cand]["low_2h2o"]["valid_pairs"]
+    high_pairs = summary[cand]["high_6h2o"]["valid_pairs"]
+
     if lo is not None and hi is not None:
         summary[cand]["moisture_shift_relaxed_eV"] = float(hi - lo)
-        summary[cand]["scientific_status"] = "usable_screening_signal"
     else:
         summary[cand]["moisture_shift_relaxed_eV"] = None
+
+    if low_pairs >= 2 and high_pairs >= 2:
+        summary[cand]["scientific_status"] = "usable_screening_signal"
+    elif low_pairs >= 1 and high_pairs >= 1:
+        summary[cand]["scientific_status"] = "provisional_insufficient_pairs"
+    else:
         summary[cand]["scientific_status"] = "inconclusive_due_to_convergence"
 
 ranking = sorted(
@@ -233,7 +241,7 @@ report = {
         "CPU execution; no GPU acceleration claim.",
         "Independent computational cross-check required before any lab prioritization."
     ],
-    "next_gate": "If at least 2 valid pairs exist per hydration state for a candidate, cross-check the leaders with an independent method; otherwise improve initialization/optimization before ranking."
+    "next_gate": "Only candidates with at least 2 valid near/far pairs in BOTH hydration states are eligible for independent-method cross-check. Provisional or inconclusive candidates must first gain more converged pairs."
 }
 (OUT/"alchemi-relaxed-top4-v5-convergence-filtered.json").write_text(
     json.dumps(report, indent=2), encoding="utf-8"
