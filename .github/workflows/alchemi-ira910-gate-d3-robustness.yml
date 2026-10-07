@@ -1,0 +1,40 @@
+name: ALCHEMI IRA910 Gate D3 Robustness
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/alchemi_ira910_gate_d3_robustness.py"
+      - ".github/workflows/alchemi-ira910-gate-d3-robustness.yml"
+jobs:
+  gate-d3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax check
+        run: python -m py_compile scripts/alchemi_ira910_gate_d3_robustness.py
+      - name: Install verified ALCHEMI stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install "nvalchemi-toolkit[aimnet]" rdkit
+      - name: Import smoke test
+        run: |
+          python - <<'PY'
+          import torch
+          from rdkit import Chem
+          from nvalchemi.models.aimnet2 import AIMNet2Wrapper
+          from nvalchemi.dynamics.optimizers.fire2 import FIRE2
+          print("ALCHEMI_IMPORT_OK", torch.__version__, torch.cuda.is_available(), Chem.MolFromSmiles("O=C=O") is not None)
+          PY
+      - name: Run Gate D3 robustness
+        run: python scripts/alchemi_ira910_gate_d3_robustness.py
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alchemi-ira910-gate-d3-robustness
+          path: 03-validation/alchemi-ira910-gate-d3-robustness.json
+          if-no-files-found: ignore
