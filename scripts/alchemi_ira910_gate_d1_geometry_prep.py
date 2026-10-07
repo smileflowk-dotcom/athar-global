@@ -69,12 +69,12 @@ for ci,(name,smi) in enumerate(IONS.items()):
             rng=np.random.default_rng(310000+ci*1000+nw*100+trial)
             existing=[sites[0],sites[1]]
             # Place divalent ion near the midpoint but reject all atom overlaps.
-            ion=place_safe(ion0,existing,rng,(1.0,2.2),1.55)
+            ion=place_safe(ion0,existing,rng,(3.0,5.0),1.55)
             existing.append(ion)
             parts=[sites[0],sites[1],ion]; nums=[site_z,site_z,ion_z]
             for wi in range(nw):
                 w0,wz,_=embed("O",1000+ci*100+trial*10+wi)
-                w=place_safe(w0,existing,rng,(4.0,7.0),1.55)
+                w=place_safe(w0,existing,rng,(5.5,8.5),1.55)
                 existing.append(w); parts.append(w); nums.append(wz)
             pos=np.concatenate(parts); z=np.concatenate(nums)
             # Full fragment-pair geometry audit.
