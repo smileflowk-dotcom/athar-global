@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MoistureSwingCandidate",
+  "type": "object",
+  "required": ["candidate_id","resin","counterion","provenance","stage"],
+  "properties": {
+    "candidate_id": {"type":"string"},
+    "resin": {"type":"string"},
+    "counterion": {"type":"string"},
+    "resin_family": {"type":["string","null"]},
+    "functional_group": {"type":["string","null"]},
+    "matrix": {"type":["string","null"]},
+    "pore_type": {"type":["string","null"]},
+    "features": {"type":"object"},
+    "conditions": {"type":"object"},
+    "provenance": {
+      "type":"object",
+      "required":["source_type"],
+      "properties":{
+        "source_type":{"enum":["measured","literature","manufacturer","inferred","virtual"]},
+        "sources":{"type":"array","items":{"type":"string"}}
+      }
+    },
+    "scores": {
+      "type":"object",
+      "properties":{
+        "prediction":{"type":["number","null"]},
+        "uncertainty":{"type":["number","null"]},
+        "ood":{"type":["number","null"]},
+        "novelty":{"type":["number","null"]},
+        "feasibility":{"type":["number","null"]},
+        "diversity":{"type":["number","null"]},
+        "physics":{"type":["number","null"]},
+        "aggregate":{"type":["number","null"]}
+      }
+    },
+    "stage":{"enum":["10K","1K","100","20","5","LAB"]},
+    "gate_status":{"enum":["PENDING","PASS","HOLD","REJECT"]},
+    "guardrails":{"type":"array","items":{"type":"string"}}
+  }
+}
