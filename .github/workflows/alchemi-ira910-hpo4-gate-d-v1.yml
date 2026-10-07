@@ -8,7 +8,7 @@ on:
 jobs:
   gate-d:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -19,8 +19,21 @@ jobs:
       - name: Install NVIDIA ALCHEMI stack
         run: |
           python -m pip install --upgrade pip
-          pip install torch rdkit numpy
-          pip install nvalchemi
+          pip install "nvalchemi-toolkit[aimnet]" rdkit
+      - name: Import smoke test
+        run: |
+          python - <<'PY'
+          import torch
+          from rdkit import Chem
+          from nvalchemi.data import AtomicData, Batch
+          from nvalchemi.dynamics.optimizers.fire2 import FIRE2
+          from nvalchemi.dynamics.base import ConvergenceHook, DynamicsStage
+          from nvalchemi.models.aimnet2 import AIMNet2Wrapper
+          print("ALCHEMI_IMPORT_OK")
+          print("torch", torch.__version__)
+          print("cuda_available", torch.cuda.is_available())
+          print("rdkit_ok", Chem.MolFromSmiles("O=C=O") is not None)
+          PY
       - name: Run targeted IRA910 HPO4 Gate D
         run: python scripts/alchemi_ira910_hpo4_gate_d_v1.py
       - name: Upload results
