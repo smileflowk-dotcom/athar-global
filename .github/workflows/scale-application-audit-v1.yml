@@ -1,6 +1,10 @@
 name: Scale Engine V1 Application Audit
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "scripts/scale_application_audit_v1.py"
+      - ".github/workflows/scale-application-audit-v1.yml"
   workflow_run:
     workflows: ["Scale Engine V1 10K to 5"]
     types: [completed]
