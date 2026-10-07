@@ -1,0 +1,41 @@
+name: Scale Engine V1 Application Audit
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Scale Engine V1 10K to 5"]
+    types: [completed]
+jobs:
+  application-audit:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install pandas openpyxl
+      - name: Download scale artifact from latest successful run
+        uses: actions/download-artifact@v4
+        with:
+          name: scale-engine-v1-10k-to-5
+          path: scale/output
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: 37625448254
+      - name: Apply top-5 audit
+        run: python scripts/scale_application_audit_v1.py
+      - name: Assert role separation
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open("scale/output/gate-5-application-audit.json"))
+          assert r["top5_total"]==5
+          assert r["data_gap_candidates"]+r["known_controls"]==5
+          print("APPLICATION_AUDIT_OK",r["data_gap_candidates"],r["known_controls"])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scale-engine-v1-application-audit
+          path: |
+            scale/output/gate-5-application-audit.csv
+            scale/output/gate-5-application-audit.json
