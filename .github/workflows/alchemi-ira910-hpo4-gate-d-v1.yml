@@ -1,0 +1,32 @@
+name: ALCHEMI IRA910 HPO4 Gate D V1
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/alchemi_ira910_hpo4_gate_d_v1.py"
+      - ".github/workflows/alchemi-ira910-hpo4-gate-d-v1.yml"
+jobs:
+  gate-d:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax check
+        run: python -m py_compile scripts/alchemi_ira910_hpo4_gate_d_v1.py
+      - name: Install NVIDIA ALCHEMI stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch rdkit numpy
+          pip install nvalchemi
+      - name: Run targeted IRA910 HPO4 Gate D
+        run: python scripts/alchemi_ira910_hpo4_gate_d_v1.py
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alchemi-ira910-hpo4-gate-d-v1
+          path: 03-validation/alchemi-ira910-hpo4-gate-d-v1.json
+          if-no-files-found: ignore
