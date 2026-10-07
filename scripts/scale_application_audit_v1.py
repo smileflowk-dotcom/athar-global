@@ -3,10 +3,10 @@ from pathlib import Path
 import sys
 import json
 import pandas as pd
-from scale.candidate_factory_v1 import load_msa
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
+from scale.candidate_factory_v1 import load_msa
 
 OUT=ROOT/"scale"/"output"
 top=pd.read_csv(OUT/"gate-5.csv")
