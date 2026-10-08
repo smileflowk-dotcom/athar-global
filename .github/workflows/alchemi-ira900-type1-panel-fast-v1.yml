@@ -1,0 +1,43 @@
+name: ALCHEMI IRA900 Fast Panel V1
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/alchemi_ira900_type1_panel_fast_v1.py"
+      - ".github/workflows/alchemi-ira900-type1-panel-fast-v1.yml"
+jobs:
+  ira900-fast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax check
+        run: python -m py_compile scripts/alchemi_ira900_type1_panel_fast_v1.py
+      - name: Install verified ALCHEMI stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install "nvalchemi-toolkit[aimnet]" rdkit
+      - name: Run fast directional panel
+        run: python scripts/alchemi_ira900_type1_panel_fast_v1.py
+      - name: Validate output
+        if: always()
+        run: |
+          if [ -f 03-validation/alchemi-ira900-type1-panel-fast-v1.json ]; then
+            python - <<'PY'
+            import json
+            r=json.load(open("03-validation/alchemi-ira900-type1-panel-fast-v1.json"))
+            print("FAST_PANEL",r["status"],r["core_accepted"],r["accepted_co2_systems"])
+            for k,v in r["summary"].items():
+                print(k,"shift",v["hydration_shift_0_to_9_eV"])
+            PY
+          fi
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alchemi-ira900-type1-panel-fast-v1
+          path: 03-validation/alchemi-ira900-type1-panel-fast-v1.json
+          if-no-files-found: ignore
