@@ -27,3 +27,8 @@ Funnel:
 5. Evidence/feasibility enrichment.
 6. Parallel 20->5 physics runner.
 7. Independent cross-check and lab packet.
+
+
+## Ranking policy update
+Primary ranking = best candidates overall for experimental testing, regardless of whether the exact pair is already known in MSA or literature.
+Novelty/data-gap status is retained as metadata and as a separate secondary ranking. It must never eliminate a strong known candidate by itself.
