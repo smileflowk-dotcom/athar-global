@@ -1,0 +1,26 @@
+{
+  "status": "PASS_TO_TARGETED_PHYSICS",
+  "primary_objective": "BEST_CANDIDATES_FOR_EXPERIMENTAL_TESTING",
+  "novelty_is_elimination_gate": false,
+  "shortlist": [
+    {"rank":1,"resin":"IRA900","counterion":"P2O7^4-","evidence":"VERY_STRONG","role":"CANDIDATE"},
+    {"rank":2,"resin":"IRA900","counterion":"PO4^3-","evidence":"STRONG","role":"CANDIDATE"},
+    {"rank":3,"resin":"IRA900","counterion":"HPO4^2-","evidence":"STRONG","role":"CANDIDATE"},
+    {"rank":4,"resin":"IRA900","counterion":"CO3^2-","evidence":"VERY_STRONG_CONTROL","role":"CONTROL"},
+    {"rank":5,"resin":"D201","counterion":"PO4^3-","evidence":"MODERATE","role":"TRANSFER_CANDIDATE"}
+  ],
+  "physics_requirements": [
+    "IRA900 Type-I motif, not IRA910 Type-II motif",
+    "charge-neutral counter-ion stoichiometry",
+    "matched hydration and CO2 protocol",
+    "geometry convergence required",
+    "multiple seeds and hydration levels",
+    "D201 kept separate unless model equivalence is explicitly justified"
+  ],
+  "guardrails": [
+    "Evidence strength is not a discovery claim",
+    "Known candidates remain eligible",
+    "Vendor similarity is not physical equivalence",
+    "Atomistic screening is a proxy, not adsorption free energy or laboratory validation"
+  ]
+}
