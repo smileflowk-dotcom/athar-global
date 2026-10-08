@@ -1,0 +1,51 @@
+name: ALCHEMI IRA900 Type-I Panel V1
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/alchemi_ira900_type1_panel_v1.py"
+      - ".github/workflows/alchemi-ira900-type1-panel-v1.yml"
+jobs:
+  ira900-panel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntax check
+        run: python -m py_compile scripts/alchemi_ira900_type1_panel_v1.py
+      - name: Install verified ALCHEMI stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install "nvalchemi-toolkit[aimnet]" rdkit
+      - name: Runtime smoke
+        run: |
+          python - <<'PY'
+          import torch
+          from rdkit import Chem
+          from nvalchemi.models.aimnet2 import AIMNet2Wrapper
+          print("ALCHEMI_READY",torch.__version__,"cuda",torch.cuda.is_available(),Chem.MolFromSmiles("C[N+](C)(C)Cc1ccccc1") is not None)
+          PY
+      - name: Run IRA900 Type-I matched panel
+        run: python scripts/alchemi_ira900_type1_panel_v1.py
+      - name: Validate output
+        if: always()
+        run: |
+          if [ -f 03-validation/alchemi-ira900-type1-panel-v1.json ]; then
+            python - <<'PY'
+            import json
+            r=json.load(open("03-validation/alchemi-ira900-type1-panel-v1.json"))
+            assert set(r["summary"])=={"carbonate_control","hpo4","po4","p2o7"}
+            assert r["charge_neutral_stoichiometry"]=={"carbonate_control":2,"hpo4":2,"po4":3,"p2o7":4}
+            print("IRA900_PANEL_OUTPUT_OK",r["status"],r["device"],r["cuda_available"])
+            PY
+          fi
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alchemi-ira900-type1-panel-v1
+          path: 03-validation/alchemi-ira900-type1-panel-v1.json
+          if-no-files-found: ignore
