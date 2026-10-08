@@ -1,0 +1,33 @@
+name: ALCHEMI IRA900 P2O7 Robustness V1
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "scripts/alchemi_ira900_p2o7_robustness_v1.py"
+      - ".github/workflows/alchemi-ira900-p2o7-robustness-v1.yml"
+jobs:
+  robustness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install scientific stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install "nvalchemi-toolkit[aimnet]" rdkit
+      - name: Run robustness screen
+        run: python scripts/alchemi_ira900_p2o7_robustness_v1.py
+      - name: Print summary
+        if: always()
+        run: |
+          python -c 'import json,pathlib; p=pathlib.Path("03-validation/alchemi-ira900-p2o7-robustness-v1.json"); print("OUTPUT_EXISTS",p.exists()); r=json.load(open(p)) if p.exists() else {}; print("STATUS",r.get("status")); [print(k,"shift",v.get("hydration_shift_0_to_9_eV"),"slope",v.get("hydration_slope_eV_per_H2O"),"mono",v.get("monotonic_non_decreasing")) for k,v in r.get("summary",{}).items()]'
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: alchemi-ira900-p2o7-robustness-v1
+          path: 03-validation/alchemi-ira900-p2o7-robustness-v1.json
+          if-no-files-found: ignore
