@@ -38,8 +38,10 @@ jobs:
           assert len(pd.read_csv("scale/output/gate-100.csv")) == 100
           assert len(pd.read_csv("scale/output/gate-20.csv")) == 20
           assert len(pd.read_csv("scale/output/gate-5.csv")) == 5
-          r=json.load(open("scale/output/scale-ranking-v1.json"))
+          r=json.load(open("scale/output/scale-ranking-v2.json"))
           assert r["scientific_status"]=="SCREENING_ONLY_NOT_VALIDATED"
+          assert r["primary_objective"]=="BEST_CANDIDATES_OVERALL_FOR_EXPERIMENTAL_TESTING"
+          assert len(r["best_candidates_overall"])==5
           print("SCALE_ENGINE_SANITY_OK")
           PY
       - name: Upload scale artifacts
