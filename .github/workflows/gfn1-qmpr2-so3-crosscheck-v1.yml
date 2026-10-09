@@ -1,0 +1,54 @@
+name: GFN1 QMPR2 SO3 Crosscheck V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/gfn1-qmpr2-so3-crosscheck-v1.yml"
+  workflow_dispatch:
+
+jobs:
+  crosscheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install independent stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy ase rdkit tblite
+      - name: Prepare QMPR-2 local-site variant
+        run: |
+          cp scripts/xtb_gfn1_ira900_p2o7_crosscheck_v2.py /tmp/qmpr2_so3_gfn1.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("/tmp/qmpr2_so3_gfn1.py")
+          s=p.read_text()
+          s=s.replace('SITE="C[N+](C)(C)Cc1ccccc1"', 'SITE="C[N+](C)(C)CC(=O)c1ccccc1"')
+          s=s.replace('"p2o7":("O=P([O-])([O-])OP(=O)([O-])[O-]",-4,4)', '"sulfite":("[O-]S(=O)[O-]",-2,2)')
+          s=s.replace('["carbonate","p2o7"]','["carbonate","sulfite"]')
+          s=s.replace('summary["p2o7"]','summary["sulfite"]')
+          s=s.replace('xtb-gfn1-ira900-p2o7-crosscheck-v2.json','xtb-gfn1-qmpr2-so3-crosscheck-v1.json')
+          s=s.replace('P2O7','SO3')
+          p.write_text(s)
+          PY
+      - name: Run GFN1-xTB cross-check
+        run: python /tmp/qmpr2_so3_gfn1.py
+      - name: Print summary
+        run: |
+          python - <<'PY'
+          import json
+          p="03-validation/xtb-gfn1-qmpr2-so3-crosscheck-v1.json"
+          r=json.load(open(p))
+          print("STATUS",r["status"])
+          for k,v in r["summary"].items():
+              print(k,"shift",v["hydration_shift_0_to_9_eV"],"pairs",v["valid_pairs"])
+          PY
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: xtb-gfn1-qmpr2-so3-crosscheck-v1
+          path: 03-validation/xtb-gfn1-qmpr2-so3-crosscheck-v1.json
