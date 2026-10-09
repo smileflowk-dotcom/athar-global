@@ -1,0 +1,40 @@
+name: QMPR2 SO3 Generalization V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/qmpr2_so3_generalization_v1.py"
+      - ".github/workflows/qmpr2-so3-generalization-v1.yml"
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas scikit-learn lightgbm openpyxl
+      - name: Run QMPR-2 + SO3 strict generalization test
+        run: python scripts/qmpr2_so3_generalization_v1.py
+      - name: Print decision
+        run: |
+          python - <<'PY'
+          import json
+          p="03-validation/qmpr2-so3-generalization-v1.json"
+          r=json.load(open(p))
+          print("STATUS",r["status"])
+          for k,v in r["summary"].items():
+              print(k,"swing",v["pred_swing_mean"],"sd",v["pred_swing_sd"],"positive_fraction",v["positive_fraction"])
+          PY
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: qmpr2-so3-generalization-v1
+          path: 03-validation/qmpr2-so3-generalization-v1.json
