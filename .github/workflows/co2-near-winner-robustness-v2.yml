@@ -1,0 +1,114 @@
+name: CO2 Near-Winner Robustness V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/co2-near-winner-robustness-v2.yml"
+
+jobs:
+  ira900-oxalate-aimnet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install "nvalchemi-toolkit[aimnet]" rdkit
+      - name: Prepare robust IRA900 oxalate test
+        run: |
+          cp scripts/alchemi_ira900_p2o7_robustness_v1.py /tmp/test.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("/tmp/test.py")
+          s=p.read_text()
+          s=s.replace('"p2o7":{"smiles":"[O-]P(=O)([O-])OP(=O)([O-])[O-]","charge":-4}', '"oxalate":{"smiles":"[O-]C(=O)C(=O)[O-]","charge":-2}')
+          s=s.replace('alchemi-ira900-p2o7-robustness-v1.json','alchemi-ira900-oxalate-robustness-v2.json')
+          s=s.replace('P2O7','oxalate').replace('p2o7','oxalate')
+          p.write_text(s)
+          PY
+      - name: Run
+        run: python /tmp/test.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ira900-oxalate-aimnet-v2
+          path: 03-validation/alchemi-ira900-oxalate-robustness-v2.json
+          if-no-files-found: ignore
+
+  qmpr1-h2po4-aimnet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install "nvalchemi-toolkit[aimnet]" rdkit
+      - name: Prepare robust QMPR1 H2PO4 test
+        run: |
+          cp scripts/alchemi_ira900_p2o7_robustness_v1.py /tmp/test.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("/tmp/test.py")
+          s=p.read_text()
+          s=s.replace('SITE_SMILES="C[N+](C)(C)Cc1ccccc1"', 'SITE_SMILES="C[N+](C)(C)CC(=O)c1ccccc1"')
+          s=s.replace('"p2o7":{"smiles":"[O-]P(=O)([O-])OP(=O)([O-])[O-]","charge":-4}', '"h2po4":{"smiles":"OP(=O)(O)[O-]","charge":-1}')
+          s=s.replace('    if n==2:\n        u=np.array([[1,0,0],[-1,0,0]],float)', '    if n==1:\n        u=np.array([[1,0,0]],float)\n    elif n==2:\n        u=np.array([[1,0,0],[-1,0,0]],float)')
+          s=s.replace('alchemi-ira900-p2o7-robustness-v1.json','alchemi-qmpr1-h2po4-robustness-v2.json')
+          s=s.replace('IRA900 Type-I','QMPR-1 local-site')
+          s=s.replace('P2O7','H2PO4').replace('p2o7','h2po4')
+          p.write_text(s)
+          PY
+      - name: Run
+        run: python /tmp/test.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qmpr1-h2po4-aimnet-v2
+          path: 03-validation/alchemi-qmpr1-h2po4-robustness-v2.json
+          if-no-files-found: ignore
+
+  qmpr3-hco3-gfn1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy ase rdkit tblite
+      - name: Prepare stronger GFN1 retry
+        run: |
+          cp scripts/autopilot_physics_v1.py /tmp/test.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("/tmp/test.py")
+          s=p.read_text()
+          s=s.replace('max_iterations=800','max_iterations=1400')
+          s=s.replace('fmax=.35,steps=90','fmax=.30,steps=180')
+          s=s.replace('for trial in [0,1]:','for trial in [0,1,2]:')
+          p.write_text(s)
+          PY
+      - name: Run
+        env:
+          CANDIDATE: QMPR-3__HCO3^-
+          METHOD: gfn1
+        run: python /tmp/test.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qmpr3-hco3-gfn1-v2
+          path: 03-validation/autopilot-v1/*.json
+          if-no-files-found: ignore
