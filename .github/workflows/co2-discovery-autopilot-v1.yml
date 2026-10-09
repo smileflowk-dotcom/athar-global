@@ -1,0 +1,114 @@
+name: CO2 Discovery Autopilot V1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/co2-discovery-autopilot-v1.yml"
+
+jobs:
+  generalization:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ML stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas scikit-learn lightgbm openpyxl
+      - name: Run strict ML gate
+        run: python scripts/autopilot_generalize_v1.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: autopilot-generalization
+          path: 03-validation/autopilot-v1/generalization.json
+
+  physics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        candidate:
+          - "IRA900__C2O4^2-"
+          - "D201__citrate^3-"
+          - "QMPR-3__HCO3^-"
+          - "QMPR-2__B(OH)4^-"
+          - "QMPR-1__H2PO4^-"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install physics stacks
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy ase rdkit tblite "nvalchemi-toolkit[aimnet]"
+      - name: Independent GFN1-xTB
+        env:
+          CANDIDATE: ${{ matrix.candidate }}
+          METHOD: gfn1
+        run: python scripts/autopilot_physics_v1.py
+      - name: AIMNet2 atomistic check
+        env:
+          CANDIDATE: ${{ matrix.candidate }}
+          METHOD: aimnet
+        run: python scripts/autopilot_physics_v1.py
+      - name: Upload candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: autopilot-physics-${{ strategy.job-index }}
+          path: 03-validation/autopilot-v1/*.json
+          if-no-files-found: ignore
+
+  decision:
+    needs: [generalization, physics]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: autopilot-*
+          path: evidence
+          merge-multiple: true
+      - name: Final evidence gate
+        run: |
+          python - <<'PY'
+          import json,glob,os
+          files=glob.glob("evidence/**/*.json",recursive=True)
+          docs=[json.load(open(p)) for p in files]
+          g=next((x for x in docs if "results" in x and "passers" in x),None)
+          ml={x["resin"]+"__"+x["counterion"]:x["pass"] for x in (g or {}).get("results",[])}
+          phy={}
+          for x in docs:
+              if "candidate" in x and "method" in x:
+                  phy.setdefault(x["candidate"],{})[x["method"]]=x["status"]
+          candidates=sorted(set(ml)|set(phy))
+          rows=[]
+          winners=[]
+          for c in candidates:
+              a=phy.get(c,{})
+              ok=bool(ml.get(c) and a.get("gfn1")=="PASS" and a.get("aimnet")=="PASS")
+              row={"candidate":c,"ml_generalization":ml.get(c),
+                   "gfn1":a.get("gfn1","MISSING"),"aimnet":a.get("aimnet","MISSING"),
+                   "promote_to_lab_review":ok}
+              rows.append(row)
+              if ok: winners.append(c)
+          report={"status":"LAB_REVIEW_CANDIDATES_FOUND" if winners else "NO_DUAL_METHOD_WINNER",
+                  "winners":winners,"decision_table":rows,
+                  "rule":"Promote only if strict ML generalization + GFN1-xTB + AIMNet2 all PASS.",
+                  "next":"If no winner, expand discovery batch rather than forcing contradictory candidates."}
+          os.makedirs("final",exist_ok=True)
+          json.dump(report,open("final/autopilot-decision.json","w"),indent=2)
+          print(json.dumps(report,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: co2-autopilot-final-decision
+          path: final/autopilot-decision.json
