@@ -1,0 +1,56 @@
+name: ALCHEMI QMPR2 SO3 Robustness V1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/alchemi-qmpr2-so3-robustness-v1.yml"
+  workflow_dispatch:
+
+jobs:
+  robustness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install scientific stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy torch rdkit nvalchemi
+      - name: Prepare QMPR-2 local-site variant
+        run: |
+          cp scripts/alchemi_ira900_p2o7_robustness_v1.py /tmp/qmpr2_so3.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("/tmp/qmpr2_so3.py")
+          s=p.read_text()
+          s=s.replace('SITE_SMILES="C[N+](C)(C)Cc1ccccc1"', 'SITE_SMILES="C[N+](C)(C)CC(=O)c1ccccc1"')
+          s=s.replace('"p2o7":{"smiles":"[O-]P(=O)([O-])OP(=O)([O-])[O-]","charge":-4}', '"sulfite":{"smiles":"[O-]S(=O)[O-]","charge":-2}')
+          s=s.replace('IRA900 Type-I site sanity failed','QMPR local-site sanity failed')
+          s=s.replace('alchemi-ira900-p2o7-robustness-v1.json','alchemi-qmpr2-so3-robustness-v1.json')
+          s=s.replace('IRA900 Type-I robustness: carbonate control vs P2O7 candidate','QMPR-2 local-site robustness: carbonate control vs sulfite candidate')
+          s=s.replace('Promote P2O7 only if it retains','Promote sulfite only if it retains')
+          s=s.replace('Local IRA900 Type-I site model only; not full polymer or pore.','Local QMPR-2 functional-site model only; not full polymer or mesopore.')
+          s=s.replace('If P2O7 passes robustness, cross-check the winning candidate','If sulfite passes robustness, cross-check the winning candidate')
+          p.write_text(s)
+          PY
+      - name: Run AIMNet2 robustness
+        run: python /tmp/qmpr2_so3.py
+      - name: Print summary
+        run: |
+          python - <<'PY'
+          import json
+          p="03-validation/alchemi-qmpr2-so3-robustness-v1.json"
+          r=json.load(open(p))
+          print("STATUS",r["status"])
+          for k,v in r["summary"].items():
+              print(k,"shift",v.get("hydration_shift_0_to_9_eV"),"slope",v.get("hydration_slope_eV_per_H2O"))
+          PY
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: alchemi-qmpr2-so3-robustness-v1
+          path: 03-validation/alchemi-qmpr2-so3-robustness-v1.json
