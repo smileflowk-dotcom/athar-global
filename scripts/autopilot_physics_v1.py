@@ -80,6 +80,7 @@ def run_gfn1(testion,nw,trial,state):
     except Exception as ex:
         return {"ok":False,"error":str(ex)}
 
+_AIMNET_CACHE={}
 def run_aimnet(testion,nw,trial,state):
     import torch
     from nvalchemi.data import AtomicData,Batch
@@ -92,8 +93,11 @@ def run_aimnet(testion,nw,trial,state):
       atomic_numbers=torch.tensor(z,dtype=torch.long),forces=torch.zeros(len(z),3),
       energy=torch.zeros(1,1),charge=torch.zeros(1,1),velocities=torch.zeros(len(z),3))
     device="cuda:0" if torch.cuda.is_available() else "cpu"
-    model=AIMNet2Wrapper.from_checkpoint("aimnet2_wb97m_d3_3",device=device,compile_model=False).eval()
-    model.model_config.active_outputs={"energy","forces"}
+    if device not in _AIMNET_CACHE:
+        model=AIMNet2Wrapper.from_checkpoint("aimnet2_wb97m_d3_3",device=device,compile_model=False).eval()
+        model.model_config.active_outputs={"energy","forces"}
+        _AIMNET_CACHE[device]=model
+    model=_AIMNET_CACHE[device]
     b=Batch.from_data_list([d],device=device)
     opt=FIRE2(model=model,dt=.001,n_steps=450,
       convergence_hook=ConvergenceHook.from_fmax(threshold=.12,source_status=0,target_status=1))
