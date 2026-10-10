@@ -9,7 +9,11 @@ import argparse
 import json
 import math
 import os
+import sys
 from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np
 import pandas as pd
@@ -295,7 +299,7 @@ def plan(args):
         if not row["strict_ml_pass"]:
             continue
         for m in ("gfn1", "aimnet"):
-            if row["evidence"][m]["status"] not in {"PASS", "PRECHECK"} and len(planned) < args.budget:
+            if row["evidence"][m]["status"] != "PASS" and len(planned) < args.budget:
                 planned.append({"candidate": row["candidate"], "method": m})
     # Valid empty matrices are awkward on Actions; use one intentionally skipped item.
     matrix = {"include": planned if planned else [{"candidate": "SKIP", "method": "skip"}]}
