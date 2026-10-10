@@ -25,13 +25,18 @@
       "title": "Investigation of Moisture Swing Adsorbents for Direct Air Capture by Dynamic Breakthrough Studies",
       "published": "2025-04-30",
       "url": "https://doi.org/10.1021/acssuschemeng.5c00227",
-      "scope": "exact_pair_control",
-      "candidate_ids": [
-        "IRA900__CO3^2-"
-      ],
-      "claim": "Dynamic breakthrough experiments on IRA900-C show humidity-dependent working capacity and mass transfer/kinetics; reports prior Hegarty pyrophosphate findings.",
+      "scope": "resin_control_carbonate_bicarbonate_mix",
+      "candidate_ids": [],
+      "claim": "Dynamic breakthrough measurements on IRA900-C, a carbonate/bicarbonate-form resin, show humidity-dependent working capacity and mass-transfer/kinetic effects. Do not equate mixed chemical speciation with a pure exact CO3 counter-ion atomistic configuration; also cites Hegarty pyrophosphate prior work.",
       "review_state": "CURATED_PRIMARY",
-      "note": "Do not attribute pyrophosphate measurements to this paper."
+      "note": "Do not attribute pyrophosphate measurements to this paper.",
+      "resins": [
+        "IRA900"
+      ],
+      "ions": [
+        "CO3^2-",
+        "HCO3^-"
+      ]
     },
     {
       "id": "HEGARTY_2026",
