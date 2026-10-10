@@ -329,26 +329,84 @@ def ingest_cache(path):
 
 
 def plan(args):
-    source = json.loads(Path(args.discovery).read_text(encoding="utf-8"))
-    candidates = strict_generalization(source["candidates"], args.ensemble, args.seed)
+    """Full scientific gates A→B→C→D before any new AIMNet2/GFN1 run."""
+    from chemistry.v4.scientific_gates import (
+        feasibility, grouped_ml_baseline, multiobjective_acquisition,
+        promote_only_if_all)
+    discovery = json.loads(Path(args.discovery).read_text(encoding="utf-8"))
+    # Keep unsupported chemistry in coarse ranking, NEVER send it to a site
+    # surrogate for which a supported validated molecular model is absent.
+    raw = discovery.get("candidate_pool", discovery.get("candidates", []))
+    supported = [r for r in raw if r["resin"] in SUPPORTED_RESINS
+                 and r["counterion"] in SUPPORTED_IONS]
+    gate_a = grouped_ml_baseline(model_data(), FEATURES, _model)
+    strict = strict_generalization(supported, args.ensemble, args.seed)
+    acquired, gate_c = multiobjective_acquisition(strict, limit=20)
     cache = ingest_cache(args.cache)
+    for row in acquired:
+        row["feasibility"] = feasibility(row)
+        row["gate_A"] = gate_a["status"]
+        row["gate_B"] = "PASS" if row["strict_ml_pass"] else "HOLD"
+        row["gate_C"] = "PASS"
+        row["gate_D"] = row["feasibility"]["status"]
+        row["can_enter_physics"] = promote_only_if_all(row, gate_a)
+        row["evidence"] = {m: cache.get((row["candidate"], m),
+                             {"candidate": row["candidate"], "method": m,
+                              "status": "MISSING"}) for m in ("gfn1", "aimnet")}
+        # Controls must always be reported separately, never passed as a
+        # newly discovered resin-ion candidate.
+        row["is_control"] = row["counterion"] == "CO3^2-"
+        row["priority"] = (1 if row["counterion"] in {"PO4^3-", "HPO4^2-", "P2O7^4-"} else 0)
+    feasible = sorted([r for r in acquired if r["can_enter_physics"]],
+                      key=lambda x: (-x["priority"], -float(x.get("balanced", 0)),
+                                     x["candidate"]))
+    final_five = feasible[:5]
     planned = []
-    for row in candidates:
-        row["evidence"] = {m: cache.get((row["candidate"], m), {"status": "MISSING", "method": m})
-                           for m in ("gfn1", "aimnet")}
-        if not row["strict_ml_pass"]:
-            continue
-        for m in ("gfn1", "aimnet"):
-            if row["evidence"][m]["status"] != "PASS" and len(planned) < args.budget:
-                planned.append({"candidate": row["candidate"], "method": m})
-    # Valid empty matrices are awkward on Actions; use one intentionally skipped item.
+    for row in final_five:
+        for method in ("aimnet", "gfn1"):
+            previous = row["evidence"][method]
+            if previous["status"] == "PASS":
+                continue
+            # Negative robust historical results are not re-run unless a
+            # method/chemistry justification is explicitly supplied later.
+            if previous["status"] == "HOLD" and previous.get("protocol") in {
+                    "aimnet-robustness-v2", "gfn1-retry-v2"}:
+                row.setdefault("no_retest_reason", []).append(
+                    method + ": prior negative/contradictory method; requires scientific review")
+                continue
+            if len(planned) < args.budget:
+                planned.append({"candidate": row["candidate"], "method": method})
     matrix = {"include": planned if planned else [{"candidate": "SKIP", "method": "skip"}]}
+    output = Path(args.output).parent
+    output.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame([{k: str(v) for k, v in c.items() if k not in {"evidence", "feasibility"}}
+                  for c in acquired]).to_csv(output/"gate-active-learning.csv", index=False)
+    pd.DataFrame([{"candidate": c["candidate"], "status": c["gate_D"],
+                   "reason": c["feasibility"]["reason"],
+                   "sources": "; ".join(c["feasibility"].get("sources", []))}
+                  for c in acquired]).to_csv(output/"gate-feasibility.csv", index=False)
+    pd.DataFrame([{"candidate": c["candidate"], "acquisition": c["acquisition_reason"],
+                   "strict_mean_swing": c["strict_mean_swing"],
+                   "uncertainty": c["strict_sd"], "ood_proxy": c["ood_proxy"],
+                   "feasibility": c["gate_D"]}
+                  for c in final_five]).to_csv(output/"gate-5.csv", index=False)
     write_json(args.output, {
-        "domain": "co2_moisture_swing", "strict_gate": candidates, "new_tests": planned,
-        "cached_items": len(cache), "status": "PHYSICS_PLAN_READY", "guardrail": GUARDRAIL,
+        "domain": "co2_moisture_swing", "engine": "chemistry-discovery-v4",
+        "gate_A_grouped_baseline": gate_a,
+        "gate_C_active_learning": gate_c,
+        "stage_counts": {**discovery.get("stage_counts", {}), "5": len(final_five)},
+        "scientific_shortlist": [c["candidate"] for c in final_five],
+        "strict_gate": acquired, "new_tests": planned,
+        "historical_evidence_items": len(cache),
+        "status": "PHYSICS_PLAN_READY" if gate_a["status"] == "PASS"
+                  else "HOLD_GROUPED_VALIDATION",
+        "guardrail": GUARDRAIL,
+        "note": "Feasibility PASS means admissible for atomistic review, never laboratory verified.",
     })
     write_json(args.matrix, matrix)
-    print("PHYSICS_PLANNED", len(planned), "CACHED", len(cache))
+    print("GATE_A", gate_a["status"], "ACQUISITION", len(acquired),
+          "GATE_D_TO_PHYSICS", len(final_five), "PHYSICS_PLANNED",
+          len(planned), "EVIDENCE_REUSED", len(cache), flush=True)
 
 
 def finalize(args):
