@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from engine import ingest_cache, write_json
+from physics import make_source
 
 
 class CacheGateTests(unittest.TestCase):
@@ -65,6 +66,19 @@ class CacheGateTests(unittest.TestCase):
             })
             got = ingest_cache(d)[("QMPR-3__HCO3^-", "gfn1")]
             self.assertEqual(got["status"], "PRECHECK")
+
+
+class PhysicsPatchTests(unittest.TestCase):
+    def test_adapters_still_match_upstream_and_compile(self):
+        for candidate, method in (
+            ("IRA900__P2O7^4-", "gfn1"),
+            ("QMPR-2__SO3^2-", "gfn1"),
+            ("QMPR-1__H2PO4^-", "aimnet"),
+            ("D201__citrate^3-", "aimnet"),
+        ):
+            with self.subTest(candidate=candidate, method=method):
+                source, _, _ = make_source(candidate, method)
+                compile(source, "adapter_test.py", "exec")
 
 
 if __name__ == "__main__":
