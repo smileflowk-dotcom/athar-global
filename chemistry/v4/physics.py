@@ -14,6 +14,7 @@ import tempfile
 from pathlib import Path
 
 ION_SMILES = {
+    "CO3^2-": ("[O-]C(=O)[O-]", -2),  # matched reference, never a discovery target
     "C2O4^2-": ("[O-]C(=O)C(=O)[O-]", -2),
     "citrate^3-": ("O=C([O-])CC(O)(CC(=O)[O-])C(=O)[O-]", -3),
     "HCO3^-": ("O=C(O)[O-]", -1),

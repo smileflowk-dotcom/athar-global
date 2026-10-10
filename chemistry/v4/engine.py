@@ -24,7 +24,7 @@ from scale.candidate_factory_v2 import ION_MAP_V2
 from scale.batch_scorer_v1 import _model, FEATURES, FEATURE_CAT, FEATURE_NUM, NUM
 
 SUPPORTED_RESINS = {"IRA900", "D201", "QMPR-1", "QMPR-2", "QMPR-3"}
-SUPPORTED_IONS = {"CO3^2-", "C2O4^2-", "citrate^3-", "HCO3^-", "B(OH)4^-", "H2PO4^-", "P2O7^4-", "SO3^2-"}
+SUPPORTED_IONS = {"CO3^2-", "C2O4^2-", "citrate^3-", "HCO3^-", "B(OH)4^-", "H2PO4^-", "HPO4^2-", "PO4^3-", "P2O7^4-", "SO3^2-"}
 ANCHORS = [("QMPR-1", "H2PO4^-"), ("QMPR-3", "HCO3^-"),
            ("IRA900", "C2O4^2-"), ("IRA900", "P2O7^4-"), ("QMPR-2", "SO3^2-")]
 GUARDRAIL = ("Virtual operating configurations are not unique material discoveries. "
