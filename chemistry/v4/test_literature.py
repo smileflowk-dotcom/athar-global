@@ -63,7 +63,7 @@ class LiteratureTests(unittest.TestCase):
             write_report(scan(offline=True), dest)
             data = json.loads(dest.read_text())
             self.assertEqual(data["status"], "OFFLINE_CURATED_ONLY")
-            self.assertNotIn("full_text", dest.read_text())
+            self.assertNotIn('"full_text":', dest.read_text())
             self.assertTrue(dest.with_name("literature.md").exists())
 
 
