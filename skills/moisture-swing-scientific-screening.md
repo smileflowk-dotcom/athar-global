@@ -64,6 +64,20 @@ Required:
 - no free-energy claim unless free energy is actually computed
 - independent method before lab promotion
 
+## CODE EXECUTION ENFORCEMENT (V4)
+
+The canonical orchestration is `.github/workflows/chemistry-discovery-v4.yml` with domain-specific rules in `chemistry/v4/scientific_gates.py`.
+
+- Scientific Gate A (experimental Qe grouped holdout and naive baseline) must PASS before physics.
+- Gate B must record leave-one-resin-out group-bootstrapped performance and uncertainty.
+- Gate C must record exploitation, exploration, balanced and diversity/reference acquisition reasons. Keep carbonate control.
+- Gate D must show evidence references, molecular formal charge, neutral site stoichiometry and verified IRA900 Type-I representation. Absent chemical or literature evidence -> HOLD, not a guess.
+- Only A–D-passing finalists may receive new NVIDIA ALCHEMI or independent GFN1 calculations; never spend atomistic budget on all virtual configurations.
+- 0/9 H2O-only GFN1 results count as PRECHECK, never full robustness. Strong promotion requires target + carbonate convergence in 0/3/6/9 H2O with multiple geometries and matched protocol.
+- `PASS_TO_PHYSICS` is **not** a laboratory material approval. No model identifies lab-validated materials without physical adsorption tests.
+- Millions of *operating configurations* never imply millions of distinct chemical compounds.
+- Previous evidence is conserved even when a prior hypothesis is rejected; never silently run repeats of known negative tests.
+
 ## OUTPUT
 
 For each candidate:

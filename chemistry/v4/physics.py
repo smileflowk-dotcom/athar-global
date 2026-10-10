@@ -19,6 +19,8 @@ ION_SMILES = {
     "HCO3^-": ("O=C(O)[O-]", -1),
     "B(OH)4^-": ("[B-](O)(O)(O)O", -1),
     "H2PO4^-": ("OP(=O)(O)[O-]", -1),
+    "HPO4^2-": ("[O-]P(=O)(O)[O-]", -2),
+    "PO4^3-": ("[O-]P(=O)([O-])[O-]", -3),
     "P2O7^4-": ("[O-]P(=O)([O-])OP(=O)([O-])[O-]", -4),
     "SO3^2-": ("[O-]S(=O)[O-]", -2),
 }
@@ -66,6 +68,8 @@ def make_source(candidate, method):
     if text.count(' "H2PO4^-":("OP(=O)(O)[O-]",-1),') != 1:
         raise RuntimeError("Autopilot V1 source changed (ion mapping)")
     extra = (' "P2O7^4-":("[O-]P(=O)([O-])OP(=O)([O-])[O-]",-4),\n'
+             ' "HPO4^2-":("[O-]P(=O)(O)[O-]",-2),\n'
+             ' "PO4^3-":("[O-]P(=O)([O-])[O-]",-3),\n'
              ' "SO3^2-":("[O-]S(=O)[O-]",-2),\n')
     text = text.replace(' "H2PO4^-":("OP(=O)(O)[O-]",-1),',
                         ' "H2PO4^-":("OP(=O)(O)[O-]",-1),\n' + extra.rstrip("\n"))
@@ -102,19 +106,27 @@ def main():
     if args.method == "aimnet":
         counts = [summary[h]["valid_pairs"] for h in (
             "dry_0h2o", "low_3h2o", "mid_6h2o", "high_9h2o")]
+        control = report["summary"]["carbonate"]
+        control_counts = [control[h]["valid_pairs"] for h in (
+            "dry_0h2o", "low_3h2o", "mid_6h2o", "high_9h2o")]
         shift = summary["hydration_shift_0_to_9_eV"]
         physical_gate = report["status"] == "PASS"
     else:
         counts = [summary["pairs"].get(h, 0) for h in HYDRATIONS]
+        control_counts = [report["summary"]["CO3^2-"]["pairs"].get(h, 0)
+                          for h in HYDRATIONS]
         shift = summary["shift_eV"]
         physical_gate = report["status"] == "PASS"
-    passed = bool(physical_gate and shift is not None and shift > 0 and min(counts) >= 2)
+    passed = bool(physical_gate and shift is not None and shift > 0
+                  and min(counts) >= 2 and min(control_counts) >= 2)
     output = {
         "candidate": args.candidate,
         "method": args.method,
         "status": "PASS" if passed else "HOLD",
         "full_robust": True, "hydration_points": [0, 3, 6, 9],
         "trials": 3, "valid_pairs": counts,
+        "control_valid_pairs": control_counts,
+        "convergence_note": "Both ion and matched carbonate control need 2 accepted near/far pairs at every hydration",
         "hydration_shift_eV": shift,
         "source_script": "existing V1 physics + V4 convergence / hydration adapter",
         "physics_proxy_only": True,
