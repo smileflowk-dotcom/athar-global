@@ -23,14 +23,15 @@ One GitHub Actions entrypoint: `.github/workflows/chemistry-discovery-v4.yml`.
 3. **Gate A — experimental validity**: holdout by `expID` against a naive training-mean Qe predictor, across two seeds. If the model cannot outperform baseline on experimental groups, no new atomistic jobs are scheduled.
 4. **Gate B — strict generalization and uncertainty**: leave-one-resin-out with **group-bootstrap multiplicities preserved**. Negative or highly uncertain prediction remains HOLD. The current OOD is a bounded descriptor proxy only.
 5. **Gate C — active learning**: exploitation, exploration, balanced performance/uncertainty, and diversity with an explicit carbonate control and historical phosphate priority. Acquisition reason is stored for every selected candidate; only 5 feasibility-passing finalists enter expensive physics.
-6. **Gate D — literature and feasibility**: automated deterministic checks against the previously audited `03-validation/scale-top-candidates-evidence-v1.json` and primary links in the audit Markdown; validate counter-ion formal charge, charge-neutral site stoichiometry with RDKit, and reject unsupported resin-site equivalence. Missing independent literature/procurement/safety verification remains **HOLD**, never an invented novelty or synthesis PASS.
+6. **Gate D — literature and feasibility**: an independent `literature` Actions job runs **before** the planner and fetches six bounded public Crossref bibliographic searches. It preserves separately curated publisher/manufacturer citations, DOI/date/title/provenance, and an explicit `NEW_METADATA_UNREVIEWED` queue; only the previously reviewed records can support a feasibility decision. The gate distinguishes exact-pair evidence from resin-platform / counter-ion-family context, includes charge/valence checks via RDKit and requires manual examination of new papers/chemistries before they can promote candidates. Network failures are marked `DEGRADED_*`, not interpreted as evidence of novelty or absence of prior art.
+
 7. **Gate E — physics**: reuse prior named artifact evidence (including negative results). Strict NVIDIA ALCHEMI/AIMNet2 checks on 0/3/6/9 explicit waters and multiple seeds; independent GFN1-xTB using those *same water counts*. Require ≥2 converged matched near/far pairs **for the target AND carbonate** at each hydration. Two-water historical GFN1 PASS is now **PRECHECK**, not full robust PASS.
 8. **Automated report**: phase-specific machine-readable JSON and CSV artifacts + Markdown, with gating A–D, evidence provenance and no lab validation claim. **No experimental validation occurs on GitHub Actions.**
 
 ALCHEMI is used only when the physics planner identifies an admissible missing atomistic test. The quick smoke explicitly sets physics budget zero, so ALCHEMI is **not** invoked in smoke runs.
 
 ### Current limitation
-The Gate D audit is automated *over already reviewed evidence*, but it is not a live systematic literature search or chemical safety approval. New pairs require scientist review and additional references. We never mistake vendor similarity for validated molecular geometry. The candidate factory is initially specific to the CO₂ moisture-swing case; future general chemistry gets its own adapters.
+The Gate D audit now includes a live, bounded Crossref **metadata discovery** step plus separately curated primary references. This is not a systematic full-text literature review, chemical safety approval, or evidence that previously unstudied material combinations are new. Newly detected DOI metadata enters a manual review queue; only reviewed sources can change eligibility. New pairs require scientist review and additional references. We never mistake vendor similarity for validated molecular geometry. The candidate factory is initially specific to the CO₂ moisture-swing case; future general chemistry gets its own adapters.
 
 
 ## Launch
@@ -56,4 +57,15 @@ Actions -> **Chemistry Discovery V4** -> Run workflow. Default full mode: 1,000,
 The intended future independent engine must use adapter contracts for `domain`, `candidate schema`, `data provenance`, `simulator`, `independent verifier`, and `experimental gate`. For now only `co2_moisture_swing` is implemented, without general-chemistry claims.
 
 ## Output
-Artifacts: `v4-discovery`, `v4-plan`, `v4-prior-evidence`, `v4-physics-*` (if any), and `v4-final`. The final decision is `chemistry/v4/output/final.json`, with an accompanying readable `final.md`.
+Artifacts: `v4-discovery`, `v4-literature`, `v4-plan`, `v4-prior-evidence`, `v4-physics-*` (if any), and `v4-final`. The final decision is `chemistry/v4/output/final.json`, with an accompanying readable `final.md`.
+
+## Bibliography evidence update (11 October 2026)
+
+- Curated machine-readable primary registry: `chemistry/v4/literature/curated_evidence.json`.
+- Automated metadata scanner: `python chemistry/v4/literature.py --rows 6`. Run **Chemistry Literature Refresh** on GitHub Actions for a standalone, on-demand live DOI search without triggering scale/ALCHEMI. Full V4 manual dispatch also runs live research; ordinary push smoke uses the curated offline registry to avoid Crossref API throttling.
+- Deterministic safety tests: `python chemistry/v4/test_literature.py`.
+- Research notes: `03-validation/moisture-swing-literature-audit-2026-10-11.md`.
+- Hegarty et al. 2023 identifies phosphate/pyrophosphate as *previously studied* (DOI `10.1021/acs.est.3c02543`). Wang et al. 2025 documents IRA900-C dynamics; Hegarty et al. 2026 shows pore and ammonium Type I/II interactions; an active-learning study published September 2026 under DOI `10.1021/acs.est.6c07244` supplies the baseline MSA-ML methodology/dataset. We cannot treat training on that dataset as independent external validation.
+- Retain citation metadata only; do not redistribute third-party full texts or assume the third-party data repository grants commercial reuse.
+
+**Do not start the million-scale campaign merely because DOI metadata scanning succeeds.** The underlying physics readiness, transferability and license/evidence gates remain separate decisions.

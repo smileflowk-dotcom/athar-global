@@ -1,0 +1,32 @@
+name: Chemistry Literature Refresh
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  literature:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify DOI safety and provenance tests
+        run: python chemistry/v4/test_literature.py
+      - name: Refresh six bounded Crossref searches without scaling or physics
+        run: python chemistry/v4/literature.py --rows 6
+      - name: Publish curated references and new metadata review queue
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-literature-refresh
+          path: |
+            chemistry/v4/output/literature.json
+            chemistry/v4/output/literature.md
+          if-no-files-found: error
+          retention-days: 30
+      - name: Display bibliography and degraded search flags
+        run: cat chemistry/v4/output/literature.md >> "$GITHUB_STEP_SUMMARY"
