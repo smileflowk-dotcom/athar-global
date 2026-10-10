@@ -88,8 +88,12 @@ jobs:
           python-version: '3.12'
       - name: Test bibliographic safeguards without network
         run: python chemistry/v4/test_literature.py
-      - name: Fetch bounded current Crossref DOI metadata
+      - name: Fetch bounded current Crossref DOI metadata on explicit full run
+        if: github.event_name == 'workflow_dispatch'
         run: python chemistry/v4/literature.py --rows 6
+      - name: Use curated local evidence in push smoke (avoid public API throttling)
+        if: github.event_name != 'workflow_dispatch'
+        run: python chemistry/v4/literature.py --offline
       - name: Upload reproducible curated and new-DOI review queue
         uses: actions/upload-artifact@v4
         with:
