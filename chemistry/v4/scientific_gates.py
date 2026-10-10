@@ -109,6 +109,13 @@ def multiobjective_acquisition(rows, *, limit=20):
     controls = unique[unique["counterion"] == NEUTRAL_CONTROL]
     if len(controls):
         add(controls.sort_values("coarse_score", ascending=False).iloc[0], "control_reference")
+    # Retain the already-reviewed IRA900 phosphate hypotheses for scientific
+    # assessment. Retention is not an ML/feasibility/physics PASS.
+    for anchor_ion in ("P2O7^4-", "HPO4^2-", "PO4^3-"):
+        anchor = unique[(unique["resin"] == "IRA900") &
+                        (unique["counterion"] == anchor_ion)]
+        if len(anchor):
+            add(anchor.iloc[0], "prior_ira900_phosphate_anchor")
     for _, rec in unique[unique["counterion"].isin(PRIOR_PHOSPHATES)].sort_values(
             "balanced", ascending=False).head(3).iterrows():
         add(rec, "prior_phosphate_evidence")
