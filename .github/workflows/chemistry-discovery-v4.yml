@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      CONFIGS: '${{ github.event_name == 'workflow_dispatch' && inputs.configurations || '1500' }}'
+      CONFIGS: "${{ github.event_name == 'workflow_dispatch' && inputs.configurations || '1500' }}"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -59,7 +59,7 @@ jobs:
     outputs:
       matrix: ${{ steps.make_matrix.outputs.matrix }}
     env:
-      BUDGET: '${{ github.event_name == 'workflow_dispatch' && inputs.physics_budget || '0' }}'
+      BUDGET: "${{ github.event_name == 'workflow_dispatch' && inputs.physics_budget || '0' }}"
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
