@@ -204,6 +204,29 @@ def feasibility(row, *, evidence_file="03-validation/scale-top-candidates-eviden
     except ImportError:
         sample["reason"] = "RDKit unavailable: cannot verify chemical site stoichiometry"
         return sample
+    # Automated bibliographic enrichment is advisory only: curated DOI/primary
+    # evidence is attached with its exact-pair vs platform/family scope; fresh
+    # Crossref metadata MUST NOT silently create a chemistry/novelty PASS.
+    from chemistry.v4.literature import evidence_for_candidate, load_curated
+    live_path = Path("chemistry/v4/output/literature.json")
+    if live_path.exists():
+        try:
+            literature = json.loads(live_path.read_text(encoding="utf-8"))
+            if literature.get("schema_version") != 1:
+                raise ValueError("Unsupported literature report version")
+        except (OSError, ValueError) as exc:
+            literature = {"curated": load_curated()["references"],
+                          "status": "DEGRADED_CURATED_ONLY",
+                          "read_error": type(exc).__name__}
+    else:
+        literature = {"curated": load_curated()["references"],
+                      "status": "CURATED_LOCAL_ONLY"}
+    audit = evidence_for_candidate(resin, ion, literature)
+    sample["bibliography"] = audit
+    sample["literature_status"] = "CURATED_WITH_UNREVIEWED_SEARCH_QUEUE"
+    sample["sources"] = sorted(set(sample["sources"] +
+                       [ref["url"] for ref in audit["exact_curated"]] +
+                       [ref["url"] for ref in audit["related_context"]]))
     path = Path(evidence_file)
     if not path.exists():
         return sample
@@ -214,7 +237,7 @@ def feasibility(row, *, evidence_file="03-validation/scale-top-candidates-eviden
         sample["reason"] = "Not in previously reviewed evidence-backed shortlist; new review required"
         return sample
     quality = known[0].get("evidence", "UNKNOWN")
-    sample["literature_status"] = "PREVIOUSLY_CURATED_EVIDENCE_WITH_PRIMARY_LINKS"
+    sample["literature_status"] = "PREVIOUSLY_CURATED_EVIDENCE_WITH_PRIMARY_LINKS_AND_DOI_AUDIT"
     sample["evidence_quality"] = quality
     sample["model_note"] = ("Prior audited IRA900 Type-I local site" if resin == "IRA900"
                             else "Vendor D201 similarity is not validated site equivalence")
