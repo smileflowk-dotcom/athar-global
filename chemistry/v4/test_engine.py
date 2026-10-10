@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from engine import ingest_cache, write_json
+from engine import ingest_cache, write_json, SUPPORTED_IONS
 from physics import make_source
 from scientific_gates import choose_diverse, multiobjective_acquisition, feasibility, promote_only_if_all
 
@@ -80,7 +80,9 @@ class PhysicsPatchTests(unittest.TestCase):
             ("QMPR-1__H2PO4^-", "aimnet"),
             ("D201__citrate^3-", "aimnet"),
             ("IRA900__PO4^3-", "gfn1"),
+            ("IRA900__PO4^3-", "aimnet"),
             ("IRA900__HPO4^2-", "aimnet"),
+            ("IRA900__HPO4^2-", "gfn1"),
         ):
             with self.subTest(candidate=candidate, method=method):
                 source, _, _ = make_source(candidate, method)
@@ -157,6 +159,56 @@ class ScientificGateTests(unittest.TestCase):
             obj["valid_pairs"][1] = 0
             write_json(root/"result.json", obj)
             self.assertNotEqual(ingest_cache(tmp)[("IRA900__PO4^3-", "gfn1")]["status"], "PASS")
+
+
+
+class PhosphateReadinessTests(unittest.TestCase):
+    """Hypothesis admission is not an atomistic or experimental PASS."""
+
+    def test_phosphates_in_all_three_adapters_and_gate_d(self):
+        from scale.candidate_factory_v2 import ION_MAP_V2
+        from physics import ION_SMILES
+        for ion in ("HPO4^2-", "PO4^3-"):
+            with self.subTest(ion=ion):
+                self.assertIn(ion, ION_MAP_V2)
+                self.assertIn(ion, ION_SMILES)
+                self.assertIn(ion, SUPPORTED_IONS)
+                decision = feasibility({"resin": "IRA900", "counterion": ion})
+                self.assertEqual(decision["status"], "PASS_TO_PHYSICS")
+                self.assertFalse(promote_only_if_all({
+                    "strict_ml_pass": False, "counterion": ion,
+                    "acquisition_reason": "prior_ira900_phosphate_anchor",
+                    "feasibility": decision}, {"status": "PASS"}))
+
+    def test_ira900_phosphates_and_carbonate_survive_acquisition(self):
+        pairs = [("IRA900", "CO3^2-"), ("IRA900", "HPO4^2-"),
+                 ("IRA900", "PO4^3-"), ("IRA900", "P2O7^4-"),
+                 ("QMPR-1", "H2PO4^-"), ("QMPR-2", "SO3^2-"),
+                 ("D201", "PO4^3-")]
+        rows = [{"resin": resin, "counterion": ion, "candidate_id": str(i),
+                 "coarse_score": .05 + .01 * i,
+                 "pred_swing_coarse": .1 + .01 * i,
+                 "strict_mean_swing": .1 + .01 * i,
+                 "strict_sd": .02, "ood_proxy": .01}
+                for i, (resin, ion) in enumerate(pairs)]
+        result, _ = multiobjective_acquisition(rows, limit=20)
+        names = {x["candidate"] for x in result}
+        for ion in ("HPO4^2-", "PO4^3-", "P2O7^4-", "CO3^2-"):
+            self.assertIn("IRA900__" + ion, names)
+
+    def test_both_physics_sources_use_full_hydration_and_compile(self):
+        for ion in ("HPO4^2-", "PO4^3-"):
+            for method in ("gfn1", "aimnet"):
+                with self.subTest(ion=ion, method=method):
+                    src, _, _ = make_source("IRA900__" + ion, method)
+                    compile(src, "phosphate_preflight.py", "exec")
+                    if method == "gfn1":
+                        self.assertEqual(src.count("for nw in [0,3,6,9]:"), 2)
+                        self.assertIn('"ok":bool(np.isfinite(e) and np.isfinite(fm) and fm<=.40)', src)
+                    else:
+                        self.assertIn('"mid_6h2o":6', src)
+                        self.assertIn('"high_9h2o":9', src)
+
 
 
 if __name__ == "__main__":
