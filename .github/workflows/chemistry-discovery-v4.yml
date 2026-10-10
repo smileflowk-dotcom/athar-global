@@ -8,6 +8,11 @@ on:
         required: true
         default: '1000000'
         type: string
+      resume_run_id:
+        description: Optional previous V4 run ID to resume its streamed screening checkpoint
+        required: false
+        default: ''
+        type: string
       physics_budget:
         description: Maximum fresh expensive physics jobs (0-8)
         required: true
@@ -33,6 +38,8 @@ jobs:
     timeout-minutes: 120
     env:
       CONFIGS: "${{ github.event_name == 'workflow_dispatch' && inputs.configurations || '1500' }}"
+      RESUME_RUN: "${{ github.event_name == 'workflow_dispatch' && inputs.resume_run_id || '' }}"
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -44,8 +51,22 @@ jobs:
         run: pip install numpy pandas scikit-learn lightgbm openpyxl
       - name: Offline scientific evidence tests
         run: python chemistry/v4/test_engine.py
+      - name: Recover previous checkpoint if requested
+        if: env.RESUME_RUN != ''
+        shell: bash
+        run: |
+          [[ "$RESUME_RUN" =~ ^[0-9]+$ ]] || { echo "Invalid run ID"; exit 1; }
+          mkdir -p chemistry/v4/output
+          gh run download "$RESUME_RUN" --repo "$GITHUB_REPOSITORY" -n v4-discovery-checkpoint -D chemistry/v4/output
       - name: Stream virtual operating configurations
         run: python chemistry/v4/engine.py discover --configurations "$CONFIGS" --chunk 5000
+      - name: Save resumable stream checkpoint even after interruption
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-discovery-checkpoint
+          path: chemistry/v4/output/discovery-checkpoint.json
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: v4-discovery
