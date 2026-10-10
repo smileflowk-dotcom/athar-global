@@ -23,8 +23,9 @@ from scale.candidate_factory_v2 import ION_MAP_V2
 from scale.batch_scorer_v1 import _model, FEATURES, FEATURE_CAT, FEATURE_NUM, NUM
 
 SUPPORTED_RESINS = {"IRA900", "D201", "QMPR-1", "QMPR-2", "QMPR-3"}
-SUPPORTED_IONS = {"CO3^2-", "C2O4^2-", "citrate^3-", "HCO3^-", "B(OH)4^-", "H2PO4^-"}
-ANCHORS = [("QMPR-1", "H2PO4^-"), ("QMPR-3", "HCO3^-"), ("IRA900", "C2O4^2-")]
+SUPPORTED_IONS = {"CO3^2-", "C2O4^2-", "citrate^3-", "HCO3^-", "B(OH)4^-", "H2PO4^-", "P2O7^4-", "SO3^2-"}
+ANCHORS = [("QMPR-1", "H2PO4^-"), ("QMPR-3", "HCO3^-"),
+           ("IRA900", "C2O4^2-"), ("IRA900", "P2O7^4-"), ("QMPR-2", "SO3^2-")]
 GUARDRAIL = ("Virtual operating configurations are not unique material discoveries. "
              "Local-site binding-energy proxies are not adsorption free energies, "
              "laboratory measurements, or proof of full-polymer performance.")
@@ -229,6 +230,9 @@ def ingest_cache(path):
         ("v2-qmpr1", "QMPR-1__H2PO4^-", "aimnet", "aimnet-robustness-v2"),
         ("v2-iraox", "IRA900__C2O4^2-", "aimnet", "aimnet-robustness-v2"),
         ("v2-qmpr3", "QMPR-3__HCO3^-", "gfn1", "gfn1-retry-v2"),
+        ("historic-p2o7-aimnet", "IRA900__P2O7^4-", "aimnet", "aimnet-robustness-v2"),
+        ("historic-p2o7-gfn1", "IRA900__P2O7^4-", "gfn1", "gfn1-retry-v2"),
+        ("historic-so3-gfn1", "QMPR-2__SO3^2-", "gfn1", "gfn1-retry-v2"),
     ]
     for folder, expected, override, protocol in manifest:
         d = root / folder
@@ -245,7 +249,8 @@ def ingest_cache(path):
                 # A generic execution PASS means all pairs converged; it does not
                 # mean positive moisture-swing. Inspect actual test-ion response.
                 ion_key = {"QMPR-1__H2PO4^-": "h2po4",
-                           "IRA900__C2O4^2-": "oxalate"}[expected]
+                           "IRA900__C2O4^2-": "oxalate",
+                           "IRA900__P2O7^4-": "p2o7"}[expected]
                 sub = obj.get("summary", {}).get(ion_key, {})
                 shift = sub.get("hydration_shift_0_to_9_eV")
                 counts = [sub.get(h, {}).get("valid_pairs", 0)
@@ -254,7 +259,8 @@ def ingest_cache(path):
                                       and shift > 0 and min(counts) >= 2) else "HOLD"
             else:
                 ion = expected.split("__", 1)[1]
-                s = obj.get("summary", {}).get(ion, {})
+                s = obj.get("summary", {}).get(ion, obj.get("summary", {}).get(
+                    "p2o7" if ion == "P2O7^4-" else "sulfite", {}))
                 # Old V1 GFN1 only demanded finite force (not actual convergence).
                 # Thus V1 GFN1 is advisory and must not count as a strict PASS.
                 count = s.get("pairs", {})
@@ -281,7 +287,9 @@ def ingest_cache(path):
         c, m = obj.get("candidate"), obj.get("method")
         if c and m in {"gfn1", "aimnet"}:
             item = {"candidate": c, "method": m,
-                    "status": "PRECHECK" if obj.get("status") == "PASS" else obj.get("status", "HOLD"),
+                    "status": ("PASS" if obj.get("full_robust") and obj.get("status") == "PASS"
+                               else "PRECHECK" if obj.get("status") == "PASS"
+                               else obj.get("status", "HOLD")),
                     "source_file": str(file), "protocol": "v4-fast-precheck"}
             if (c, m) not in out or out[(c, m)]["status"] not in {"PASS"}:
                 out[(c, m)] = item
