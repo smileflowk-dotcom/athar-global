@@ -6,6 +6,7 @@ A screen is NOT a material discovery or experimental validation.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -73,6 +74,9 @@ def model_data():
 def discover(args):
     from scale.candidate_factory_v1 import _mode
     df = model_data()
+    signature = hashlib.sha256(
+        pd.util.hash_pandas_object(df[FEATURES + ["Qe"]], index=False)
+        .to_numpy().tobytes()).hexdigest()[:20]
     model = _model(20261010)
     model.fit(df[FEATURES], df["Qe"].astype(float))
     records = profiles(df)
@@ -103,6 +107,20 @@ def discover(args):
 
     best = {}
     screened = 0
+    checkpoint_path = Path(args.resume)
+    if checkpoint_path.exists():
+        saved = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        if (saved.get("seed") != args.seed or saved.get("chunk") != args.chunk
+            or saved.get("dataset_sha") != signature
+            or saved.get("engine") != "chemistry-discovery-v4"):
+            raise RuntimeError("Checkpoint incompatible with current input/model; refuse unsafe resume")
+        screened = int(saved["screened"])
+        if screened > args.configurations:
+            raise RuntimeError("Checkpoint exceeds requested screening horizon")
+        for item in saved["best"]:
+            best[(item["resin"], item["counterion"])] = item
+        rng.bit_generator.state = saved["rng_state"]
+        print("RESUMED_COMPUTATION_FROM", screened, flush=True)
     while screened < args.configurations:
         count = min(args.chunk, args.configurations - screened)
         pair_ids = (np.arange(screened, screened + count) + args.seed) % len(pairs)
@@ -142,6 +160,13 @@ def discover(args):
             if old is None or item["coarse_score"] > old["coarse_score"]:
                 best[(r, i)] = item
         screened += count
+        if screened % (args.chunk * 10) == 0 or screened == args.configurations:
+            write_json(checkpoint_path, {
+                "engine": "chemistry-discovery-v4", "seed": args.seed,
+                "chunk": args.chunk, "dataset_sha": signature,
+                "screened": screened, "rng_state": rng.bit_generator.state,
+                "best": list(best.values())
+            })
         print(f"COARSE_STREAM_EVALUATED {screened}/{args.configurations}", flush=True)
 
     available = sorted(best.values(), key=lambda x: x["coarse_score"], reverse=True)
@@ -363,6 +388,7 @@ def main():
     a.add_argument("--shortlist", type=int, default=5)
     a.add_argument("--seed", type=int, default=20261010)
     a.add_argument("--output", default="chemistry/v4/output/discovery.json")
+    a.add_argument("--resume", default="chemistry/v4/output/discovery-checkpoint.json")
     a = sub.add_parser("plan")
     a.add_argument("--discovery", default="chemistry/v4/output/discovery.json")
     a.add_argument("--cache", default="chemistry/v4/cache")
