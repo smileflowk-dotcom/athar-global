@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-11",
+  "policy": "Curated publisher/manufacturer evidence and DOI metadata, not full-text redistribution or automated novelty proof. Exact-pair evidence is distinct from family/platform evidence.",
+  "references": [
+    {
+      "id": "HEGARTY_2023",
+      "kind": "primary_experiment",
+      "doi": "10.1021/acs.est.3c02543",
+      "title": "Expanding the Library of Ions for Moisture-Swing Carbon Capture",
+      "published": "2023-10-03",
+      "url": "https://doi.org/10.1021/acs.est.3c02543",
+      "scope": "exact_pair_prior_art",
+      "candidate_ids": [
+        "IRA900__P2O7^4-"
+      ],
+      "claim": "Pyrophosphate-loaded IRA900 was studied before this project. Ranking depends on normalization: pyrophosphate led by ion/charge, while dibasic phosphate and tribasic phosphate had different strength/kinetics criteria. Do not claim these ions as novel.",
+      "review_state": "CURATED_PRIMARY",
+      "note": "Publisher abstract and 2025 Wang paper cross-reference."
+    },
+    {
+      "id": "WANG_2025",
+      "kind": "primary_experiment",
+      "doi": "10.1021/acssuschemeng.5c00227",
+      "title": "Investigation of Moisture Swing Adsorbents for Direct Air Capture by Dynamic Breakthrough Studies",
+      "published": "2025-04-30",
+      "url": "https://doi.org/10.1021/acssuschemeng.5c00227",
+      "scope": "exact_pair_control",
+      "candidate_ids": [
+        "IRA900__CO3^2-"
+      ],
+      "claim": "Dynamic breakthrough experiments on IRA900-C show humidity-dependent working capacity and mass transfer/kinetics; reports prior Hegarty pyrophosphate findings.",
+      "review_state": "CURATED_PRIMARY",
+      "note": "Do not attribute pyrophosphate measurements to this paper."
+    },
+    {
+      "id": "HEGARTY_2026",
+      "kind": "primary_experiment",
+      "doi": "10.1021/acs.est.5c16820",
+      "title": "Structure-Property Relationships for Moisture-Swing Direct Air Capture",
+      "published": "2026-04-10",
+      "url": "https://doi.org/10.1021/acs.est.5c16820",
+      "scope": "family_mechanism",
+      "candidate_ids": [],
+      "resin_families": [
+        "strong_base_type_I",
+        "strong_base_type_II"
+      ],
+      "ions": [
+        "HPO4^2-",
+        "CO3^2-"
+      ],
+      "claim": "Across ten commercial resins, site type, counterion and pore connectivity interact. Type I showed stronger phosphate and Type II stronger carbonate swing under studied conditions; kinetics and architecture matter.",
+      "review_state": "CURATED_PRIMARY",
+      "note": "Cannot transfer family-wide result to an unmeasured exact resin/counterion pair."
+    },
+    {
+      "id": "FREEMAN_2026",
+      "kind": "primary_experiment",
+      "doi": "10.1021/acs.est.5c11862",
+      "title": "CO2 Sorption in Moisture Swing Anion Exchange Resins for Direct Air Capture: Experimental Isotherm Determination and Modeling",
+      "published": "2026-01-08",
+      "url": "https://doi.org/10.1021/acs.est.5c11862",
+      "scope": "platform_context",
+      "candidate_ids": [],
+      "resins": [
+        "IRA900"
+      ],
+      "claim": "Experimental isotherms and modelling on IRA900 support measuring capacity across humidity, temperature and CO2 partial pressure.",
+      "review_state": "CURATED_PRIMARY"
+    },
+    {
+      "id": "AL_MSA_2026",
+      "kind": "primary_ml_experiment",
+      "doi": "10.1021/acs.est.6c07244",
+      "title": "Active Learning-Guided Optimization of Moisture Swing Adsorption for Direct Air Capture",
+      "published": "2026-09-26",
+      "url": "https://doi.org/10.1021/acs.est.6c07244",
+      "scope": "dataset_and_method",
+      "candidate_ids": [],
+      "claim": "290 data points, 201 distinct experimental conditions across 20 resins, incorporating active learning and experimental validation of selected pairs. This is prior methodology, not our novel discovery.",
+      "review_state": "CURATED_PRIMARY",
+      "data_source": "https://github.com/PYU-pub/MSA-ML",
+      "note": "Check the dataset repository's actual reuse terms before commercial redistribution. Metadata and citations only here."
+    },
+    {
+      "id": "PO4_2019",
+      "kind": "primary_experiment",
+      "doi": "10.1021/acs.energyfuels.9b00863",
+      "title": "Moisture Swing Ion-Exchange Resin-PO4 Sorbent for Reversible CO2 Capture from Ambient Air",
+      "published": "2019",
+      "url": "https://doi.org/10.1021/acs.energyfuels.9b00863",
+      "scope": "phosphate_family_prior_art",
+      "candidate_ids": [],
+      "ions": [
+        "PO4^3-"
+      ],
+      "claim": "Phosphate moisture-swing concept was already investigated. Does not by itself validate every modern resin formulation.",
+      "review_state": "CURATED_PRIMARY"
+    },
+    {
+      "id": "DUPONT_IRA900",
+      "kind": "manufacturer_datasheet",
+      "doi": null,
+      "title": "AmberLite IRA900 Cl product data sheet",
+      "published": "2023-02",
+      "url": "https://www.dupont.com/content/dam/water/amer/us/en/water/public/documents/en/IER-AmberLite-IRA900-Cl-PDS-45-D01254-en.pdf",
+      "scope": "platform_procurement",
+      "candidate_ids": [],
+      "resins": [
+        "IRA900"
+      ],
+      "claim": "Product manufacturer documents macroporous Type I strong-base anion-exchange resin. Product datasheet does not experimentally establish an exchanged-ion moisture-swing performance.",
+      "review_state": "CURATED_PRIMARY"
+    },
+    {
+      "id": "D201_DATASHEET",
+      "kind": "manufacturer_datasheet",
+      "doi": null,
+      "title": "D201 resin data sheet",
+      "published": null,
+      "url": "https://www.lijiresin.com/files/d201.pdf",
+      "scope": "platform_procurement",
+      "candidate_ids": [],
+      "resins": [
+        "D201"
+      ],
+      "claim": "Historic datasheet shows commercial resin family only. D201 is not automatically equivalent to IRA900 or its atomistic fragment.",
+      "review_state": "PREVIOUS_AUDIT_PENDING_REFRESH"
+    }
+  ]
+}
