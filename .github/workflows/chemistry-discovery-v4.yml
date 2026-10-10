@@ -1,0 +1,174 @@
+name: Chemistry Discovery V4
+
+on:
+  workflow_dispatch:
+    inputs:
+      configurations:
+        description: Virtual configurations to screen (up to 3000000)
+        required: true
+        default: '1000000'
+        type: string
+      physics_budget:
+        description: Maximum fresh expensive physics jobs (0-8)
+        required: true
+        default: '2'
+        type: string
+  push:
+    branches: [main, feat/chemistry-discovery-v4]
+    paths:
+      - "chemistry/v4/**"
+      - ".github/workflows/chemistry-discovery-v4.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: chemistry-v4-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      CONFIGS: '${{ github.event_name == 'workflow_dispatch' && inputs.configurations || '1500' }}'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: '.github/workflows/chemistry-discovery-v4.yml'
+      - name: Install existing ML dependencies
+        run: pip install numpy pandas scikit-learn lightgbm openpyxl
+      - name: Offline scientific evidence tests
+        run: python chemistry/v4/test_engine.py
+      - name: Stream virtual operating configurations
+        run: python chemistry/v4/engine.py discover --configurations "$CONFIGS" --chunk 5000
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-discovery
+          path: chemistry/v4/output/discovery.json
+          retention-days: 30
+
+  plan:
+    needs: discover
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      matrix: ${{ steps.make_matrix.outputs.matrix }}
+    env:
+      BUDGET: '${{ github.event_name == 'workflow_dispatch' && inputs.physics_budget || '0' }}'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy pandas scikit-learn lightgbm openpyxl
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-discovery
+          path: chemistry/v4/output
+      - name: Reuse historical evidence (never rerun a robust PASS)
+        shell: bash
+        run: |
+          set -u
+          for n in 0 1 2 3 4; do
+            mkdir -p "chemistry/v4/cache/v1-$n"
+            gh run download 37998848865 --repo "$GITHUB_REPOSITORY" -n "autopilot-physics-$n" -D "chemistry/v4/cache/v1-$n" || echo "V1 artifact unavailable for slot $n"
+          done
+          for spec in 'v2-qmpr1:qmpr1-h2po4-aimnet-v2' 'v2-iraox:ira900-oxalate-aimnet-v2' 'v2-qmpr3:qmpr3-hco3-gfn1-v2'; do
+            folder="${spec%%:*}"
+            name="${spec#*:}"
+            mkdir -p "chemistry/v4/cache/$folder"
+            gh run download 38003905128 --repo "$GITHUB_REPOSITORY" -n "$name" -D "chemistry/v4/cache/$folder" || echo "V2 artifact unavailable: $name"
+          done
+      - name: Strict grouped generalization and bounded evidence-driven plan
+        run: python chemistry/v4/engine.py plan --ensemble 4 --budget "$BUDGET"
+      - name: Emit dynamic physics matrix
+        id: make_matrix
+        shell: bash
+        run: |
+          echo "matrix=$(tr -d '\n' < chemistry/v4/output/matrix.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-plan
+          path: chemistry/v4/output/plan.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-prior-evidence
+          path: chemistry/v4/cache/
+          if-no-files-found: warn
+
+  physics:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        if: matrix.method != 'skip'
+      - uses: actions/setup-python@v5
+        if: matrix.method != 'skip'
+        with:
+          python-version: '3.12'
+      - name: Install independent GFN1 scientific stack
+        if: matrix.method == 'gfn1'
+        run: pip install numpy ase rdkit tblite
+      - name: Install AIMNet2 scientific stack
+        if: matrix.method == 'aimnet'
+        run: pip install numpy ase rdkit "nvalchemi-toolkit[aimnet]"
+      - name: Run missing evidence only (precheck; not lab validation)
+        if: matrix.method != 'skip'
+        run: python chemistry/v4/physics.py --candidate "${{ matrix.candidate }}" --method "${{ matrix.method }}"
+      - name: Upload fresh physics evidence
+        if: matrix.method != 'skip'
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-physics-${{ strategy.job-index }}
+          path: 03-validation/autopilot-v1/*.json
+          if-no-files-found: warn
+
+  finalize:
+    needs: [discover, plan, physics]
+    if: always() && needs.discover.result == 'success' && needs.plan.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install numpy pandas scikit-learn lightgbm openpyxl
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-discovery
+          path: chemistry/v4/output
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-plan
+          path: chemistry/v4/output
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-prior-evidence
+          path: chemistry/v4/cache
+        continue-on-error: true
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: v4-physics-*
+          path: chemistry/v4/cache/new
+          merge-multiple: true
+        continue-on-error: true
+      - name: Emit final scientific triage (fail-closed on missing evidence)
+        run: python chemistry/v4/engine.py finalize
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v4-final
+          path: chemistry/v4/output/final.*
+      - name: Write GitHub Actions run summary
+        run: cat chemistry/v4/output/final.md >> "$GITHUB_STEP_SUMMARY"
