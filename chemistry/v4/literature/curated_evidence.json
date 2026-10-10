@@ -81,7 +81,8 @@
       "claim": "290 data points, 201 distinct experimental conditions across 20 resins, incorporating active learning and experimental validation of selected pairs. This is prior methodology, not our novel discovery.",
       "review_state": "CURATED_PRIMARY",
       "data_source": "https://github.com/PYU-pub/MSA-ML",
-      "note": "Check the dataset repository's actual reuse terms before commercial redistribution. Metadata and citations only here."
+      "note": "The publisher article is CC BY 4.0, but the separate PYU-pub/MSA-ML code/data repository does not declare a repository license in GitHub metadata or its root. Attribution alone is not a confirmed blanket permission for commercial redistribution. Seek owner confirmation/clear license and pin data revision.",
+      "data_reuse_status": "REPO_LICENSE_NOT_DECLARED_IN_GITHUB_METADATA_OR_ROOT_LISTING_AS_OF_2026-10-11"
     },
     {
       "id": "PO4_2019",
