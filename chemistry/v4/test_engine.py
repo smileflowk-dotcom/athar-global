@@ -180,6 +180,14 @@ class PhosphateReadinessTests(unittest.TestCase):
                     "acquisition_reason": "prior_ira900_phosphate_anchor",
                     "feasibility": decision}, {"status": "PASS"}))
 
+    def test_carbonate_reference_has_valid_chemistry_but_is_never_promoted(self):
+        control = feasibility({"resin": "IRA900", "counterion": "CO3^2-"})
+        self.assertEqual(control["status"], "PASS_TO_PHYSICS")
+        self.assertFalse(promote_only_if_all({
+            "strict_ml_pass": True, "counterion": "CO3^2-",
+            "acquisition_reason": "control_reference", "feasibility": control},
+            {"status": "PASS"}))
+
     def test_ira900_phosphates_and_carbonate_survive_acquisition(self):
         pairs = [("IRA900", "CO3^2-"), ("IRA900", "HPO4^2-"),
                  ("IRA900", "PO4^3-"), ("IRA900", "P2O7^4-"),
