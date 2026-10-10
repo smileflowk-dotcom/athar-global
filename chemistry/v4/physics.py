@@ -68,6 +68,8 @@ def make_source(candidate, method):
     if text.count(' "H2PO4^-":("OP(=O)(O)[O-]",-1),') != 1:
         raise RuntimeError("Autopilot V1 source changed (ion mapping)")
     extra = (' "P2O7^4-":("[O-]P(=O)([O-])OP(=O)([O-])[O-]",-4),\n'
+             ' "HPO4^2-":("[O-]P(=O)(O)[O-]",-2),\n'
+             ' "PO4^3-":("[O-]P(=O)([O-])[O-]",-3),\n'
              ' "SO3^2-":("[O-]S(=O)[O-]",-2),\n')
     text = text.replace(' "H2PO4^-":("OP(=O)(O)[O-]",-1),',
                         ' "H2PO4^-":("OP(=O)(O)[O-]",-1),\n' + extra.rstrip("\n"))
