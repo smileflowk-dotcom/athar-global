@@ -71,7 +71,11 @@ The canonical orchestration is `.github/workflows/chemistry-discovery-v4.yml` wi
 - Scientific Gate A (experimental Qe grouped holdout and naive baseline) must PASS before physics.
 - Gate B must record leave-one-resin-out group-bootstrapped performance and uncertainty.
 - Gate C must record exploitation, exploration, balanced and diversity/reference acquisition reasons. Keep carbonate control.
-- Gate D must show evidence references, molecular formal charge, neutral site stoichiometry and verified IRA900 Type-I representation. Absent chemical or literature evidence -> HOLD, not a guess.
+- Gate D must show evidence references, molecular formal charge, neutral site stoichiometry and verified IRA900 Type-I representation.
+- Before Gate D, run the V4 bibliographic radar `chemistry/v4/literature.py`: separate curated primary publisher/manufacturer sources from newly retrieved Crossref DOI metadata. An API hit is NOT verified exact-pair evidence; mark `NEW_METADATA_UNREVIEWED`. Only a manually curated source with the correct claim scope can change a chemistry assessment. Failed queries are `DEGRADED`, not proof of originality.
+- Existing phosphate and pyrophosphate moisture-swing performance has pre-2026 literature; no counter-ion novelty claim. See `03-validation/moisture-swing-literature-audit-2026-10-11.md`.
+- Distinguish data-source overlap: the September 2026 active-learning paper behind `PYU-pub/MSA-ML` is methodological/data prior art, not independent validation of a model trained on it. Confirm data licensing separately.
+ Absent chemical or literature evidence -> HOLD, not a guess.
 - Only A–D-passing finalists may receive new NVIDIA ALCHEMI or independent GFN1 calculations; never spend atomistic budget on all virtual configurations.
 - 0/9 H2O-only GFN1 results count as PRECHECK, never full robustness. Strong promotion requires target + carbonate convergence in 0/3/6/9 H2O with multiple geometries and matched protocol.
 - `PASS_TO_PHYSICS` is **not** a laboratory material approval. No model identifies lab-validated materials without physical adsorption tests.
