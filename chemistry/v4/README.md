@@ -62,7 +62,7 @@ Artifacts: `v4-discovery`, `v4-literature`, `v4-plan`, `v4-prior-evidence`, `v4-
 ## Bibliography evidence update (11 October 2026)
 
 - Curated machine-readable primary registry: `chemistry/v4/literature/curated_evidence.json`.
-- Automated metadata scanner: `python chemistry/v4/literature.py --rows 6`.
+- Automated metadata scanner: `python chemistry/v4/literature.py --rows 6`. Run **Chemistry Literature Refresh** on GitHub Actions for a standalone, on-demand live DOI search without triggering scale/ALCHEMI. Full V4 manual dispatch also runs live research; ordinary push smoke uses the curated offline registry to avoid Crossref API throttling.
 - Deterministic safety tests: `python chemistry/v4/test_literature.py`.
 - Research notes: `03-validation/moisture-swing-literature-audit-2026-10-11.md`.
 - Hegarty et al. 2023 identifies phosphate/pyrophosphate as *previously studied* (DOI `10.1021/acs.est.3c02543`). Wang et al. 2025 documents IRA900-C dynamics; Hegarty et al. 2026 shows pore and ammonium Type I/II interactions; an active-learning study published September 2026 under DOI `10.1021/acs.est.6c07244` supplies the baseline MSA-ML methodology/dataset. We cannot treat training on that dataset as independent external validation.
