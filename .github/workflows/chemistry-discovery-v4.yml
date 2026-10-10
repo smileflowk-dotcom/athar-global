@@ -19,7 +19,7 @@ on:
         default: '2'
         type: string
   push:
-    branches: [main, feat/chemistry-discovery-v4, feat/scientific-gates-v4]
+    branches: [main, feat/v4-literature-evidence]
     paths:
       - "chemistry/v4/**"
       - ".github/workflows/chemistry-discovery-v4.yml"
@@ -78,8 +78,30 @@ jobs:
             chemistry/v4/output/gate-20.csv
           retention-days: 30
 
+  literature:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test bibliographic safeguards without network
+        run: python chemistry/v4/test_literature.py
+      - name: Fetch bounded current Crossref DOI metadata
+        run: python chemistry/v4/literature.py --rows 6
+      - name: Upload reproducible curated and new-DOI review queue
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-literature
+          path: |
+            chemistry/v4/output/literature.json
+            chemistry/v4/output/literature.md
+          if-no-files-found: error
+          retention-days: 30
+
   plan:
-    needs: discover
+    needs: [discover, literature]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
@@ -96,6 +118,10 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: v4-discovery
+          path: chemistry/v4/output
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-literature
           path: chemistry/v4/output
       - name: Reuse historical evidence (never rerun a robust PASS)
         shell: bash
@@ -171,8 +197,8 @@ jobs:
           if-no-files-found: warn
 
   finalize:
-    needs: [discover, plan, physics]
-    if: always() && needs.discover.result == 'success' && needs.plan.result == 'success'
+    needs: [discover, literature, plan, physics]
+    if: always() && needs.discover.result == 'success' && needs.literature.result == 'success' && needs.plan.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -200,6 +226,10 @@ jobs:
           path: chemistry/v4/cache/new
           merge-multiple: true
         continue-on-error: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: v4-literature
+          path: chemistry/v4/output
       - name: Emit final scientific triage (fail-closed on missing evidence)
         run: python chemistry/v4/engine.py finalize
       - uses: actions/upload-artifact@v4
@@ -208,5 +238,6 @@ jobs:
           path: |
             chemistry/v4/output/final.*
             chemistry/v4/output/gate-*.csv
+            chemistry/v4/output/literature.*
       - name: Write GitHub Actions run summary
         run: cat chemistry/v4/output/final.md >> "$GITHUB_STEP_SUMMARY"
