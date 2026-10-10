@@ -79,11 +79,17 @@ jobs:
             mkdir -p "chemistry/v4/cache/v1-$n"
             gh run download 37998848865 --repo "$GITHUB_REPOSITORY" -n "autopilot-physics-$n" -D "chemistry/v4/cache/v1-$n" || echo "V1 artifact unavailable for slot $n"
           done
-          for spec in 'v2-qmpr1:qmpr1-h2po4-aimnet-v2' 'v2-iraox:ira900-oxalate-aimnet-v2' 'v2-qmpr3:qmpr3-hco3-gfn1-v2'; do
+          for spec in 'v2-qmpr1:qmpr1-h2po4-aimnet-v2' 'v2-iraox:ira900-oxalate-aimnet-v2' 'v2-qmpr3:qmpr3-hco3-gfn1-v2' 'historic-p2o7-aimnet:alchemi-ira900-p2o7-robustness-v1' 'historic-p2o7-gfn1:xtb-gfn1-ira900-p2o7-crosscheck-v2' 'historic-so3-gfn1:xtb-gfn1-qmpr2-so3-crosscheck-v1'; do
             folder="${spec%%:*}"
             name="${spec#*:}"
             mkdir -p "chemistry/v4/cache/$folder"
-            gh run download 38003905128 --repo "$GITHUB_REPOSITORY" -n "$name" -D "chemistry/v4/cache/$folder" || echo "V2 artifact unavailable: $name"
+            run_id=38003905128
+            case "$folder" in
+              historic-p2o7-aimnet) run_id=37833231079 ;;
+              historic-p2o7-gfn1) run_id=37977996642 ;;
+              historic-so3-gfn1) run_id=37988770569 ;;
+            esac
+            gh run download "$run_id" --repo "$GITHUB_REPOSITORY" -n "$name" -D "chemistry/v4/cache/$folder" || echo "Historical artifact unavailable: $name"
           done
       - name: Strict grouped generalization and bounded evidence-driven plan
         run: python chemistry/v4/engine.py plan --ensemble 4 --budget "$BUDGET"
@@ -123,7 +129,7 @@ jobs:
       - name: Install AIMNet2 scientific stack
         if: matrix.method == 'aimnet'
         run: pip install numpy ase rdkit "nvalchemi-toolkit[aimnet]"
-      - name: Run missing evidence only (precheck; not lab validation)
+      - name: Run missing four-hydration robustness (computational only)
         if: matrix.method != 'skip'
         run: python chemistry/v4/physics.py --candidate "${{ matrix.candidate }}" --method "${{ matrix.method }}"
       - name: Upload fresh physics evidence
@@ -131,7 +137,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: v4-physics-${{ strategy.job-index }}
-          path: 03-validation/autopilot-v1/*.json
+          path: chemistry/v4/cache/new/*.json
           if-no-files-found: warn
 
   finalize:
