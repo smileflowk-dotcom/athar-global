@@ -176,6 +176,34 @@ def feasibility(row, *, evidence_file="03-validation/scale-top-candidates-eviden
               "sources": REVIEWED_REFS.get(resin, []),
               "status": "HOLD",
               "reason": "No verified exact chemical/process feasibility evidence"}
+    # Charge/valence sanity on the *actual fragment representation* used by
+    # the atomistic adapter. This is not a synthesis or hazard assessment.
+    try:
+        from rdkit import Chem
+        from chemistry.v4.physics import ION_SMILES, SITES
+        from scale.candidate_factory_v2 import ION_MAP_V2
+        definition = ION_SMILES.get(ion)
+        site = SITES.get(resin)
+        if not definition or not site or ion not in ION_MAP_V2:
+            sample["reason"] = "No supported, identified local-site/counter-ion molecular model"
+            return sample
+        frag, site_mol = Chem.MolFromSmiles(definition[0]), Chem.MolFromSmiles(site)
+        if frag is None or site_mol is None:
+            sample["reason"] = "RDKit valence sanity failed"
+            return sample
+        ion_charge = sum(a.GetFormalCharge() for a in frag.GetAtoms())
+        site_charge = sum(a.GetFormalCharge() for a in site_mol.GetAtoms())
+        nsites = -ion_charge
+        if (ion_charge != definition[1]
+            or ion_charge != -round(ION_MAP_V2[ion][0])
+            or site_charge != 1 or not 1 <= nsites <= 4):
+            sample["reason"] = "Counter-ion charge / site-neutrality / stoichiometry mismatch"
+            return sample
+        sample["charge_balance"] = {"ion": ion_charge, "site": site_charge,
+                                    "neutral_stoichiometry_sites": nsites}
+    except ImportError:
+        sample["reason"] = "RDKit unavailable: cannot verify chemical site stoichiometry"
+        return sample
     path = Path(evidence_file)
     if not path.exists():
         return sample
