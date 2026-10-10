@@ -19,7 +19,7 @@ on:
         default: '2'
         type: string
   push:
-    branches: [main, feat/chemistry-discovery-v4]
+    branches: [main, feat/chemistry-discovery-v4, feat/scientific-gates-v4]
     paths:
       - "chemistry/v4/**"
       - ".github/workflows/chemistry-discovery-v4.yml"
