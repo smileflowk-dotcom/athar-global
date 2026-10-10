@@ -226,7 +226,11 @@ def strict_generalization(candidates, ensemble, seed):
                 bundles = []
                 for b in range(ensemble):
                     sampled = rng.choice(groups, size=len(groups), replace=True)
-                    selected = train[train["expID"].isin(sampled)]
+                    # Preserve bootstrap multiplicities: isin(sampled) loses repeats
+                    # and severely understates grouped ensemble uncertainty.
+                    indexed = {g: train.loc[train["expID"] == g] for g in groups}
+                    selected = pd.concat([indexed[g] for g in sampled],
+                                         ignore_index=True)
                     model = _model(seed + idx * 31 + b)
                     model.fit(selected[FEATURES], selected["Qe"].astype(float))
                     bundles.append(model)
