@@ -17,10 +17,11 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 CURATED = Path(__file__).resolve().parent / "literature" / "curated_evidence.json"
 DEFAULT_OUT = Path("chemistry/v4/output/literature.json")
-AS_OF = dt.date(2026, 10, 11)
+AS_OF = dt.datetime.now(ZoneInfo('Europe/Paris')).date()
 QUERIES = [
     "moisture swing direct air capture anion exchange phosphate carbonate",
     "pyrophosphate moisture swing IRA900 CO2",
@@ -131,6 +132,7 @@ def scan(offline=False, *, per_query=6, as_of=AS_OF, client=fetch_json):
                 errors.append({"query": query, "kind": type(exc).__name__})
     return {
         "schema_version": 1, "as_of": as_of.isoformat(),
+        "retrieved_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "status": "OFFLINE_CURATED_ONLY" if offline else (
             "LIVE_OK" if not errors else "DEGRADED_PARTIAL" if counts else "DEGRADED_CURATED_ONLY"),
         "source": "Crossref public bibliographic metadata; existing publisher-reviewed registry",
