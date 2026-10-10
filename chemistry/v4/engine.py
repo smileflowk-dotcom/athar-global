@@ -287,8 +287,12 @@ def ingest_cache(path):
                 shift = sub.get("hydration_shift_0_to_9_eV")
                 counts = [sub.get(h, {}).get("valid_pairs", 0)
                           for h in ["dry_0h2o", "low_3h2o", "mid_6h2o", "high_9h2o"]]
-                decision = "PASS" if (obj.get("status") == "PASS" and shift is not None
-                                      and shift > 0 and min(counts) >= 2) else "HOLD"
+                control = obj.get("summary", {}).get("carbonate", {})
+                control_counts = [control.get(h, {}).get("valid_pairs", 0)
+                                  for h in ["dry_0h2o", "low_3h2o", "mid_6h2o", "high_9h2o"]]
+                decision = "PASS" if (obj.get("status") == "PASS"
+                                      and shift is not None and shift > 0
+                                      and min(counts) >= 2 and min(control_counts) >= 2) else "HOLD"
             else:
                 ion = expected.split("__", 1)[1]
                 s = obj.get("summary", {}).get(ion, obj.get("summary", {}).get(
@@ -300,7 +304,9 @@ def ingest_cache(path):
                 good = shift is not None and shift > 0 and min(count.get("0", 0), count.get("9", 0)) >= 1
                 decision = "PRECHECK" if good and obj.get("status") == "PASS" else "HOLD"
                 if protocol == "gfn1-retry-v2" and good:
-                    decision = "PARTIAL" if min(count.get("0", 0), count.get("9", 0)) < 2 else "PASS"
+                    # Historical GFN1 near-winner retries tested 0 and 9 H2O,
+                    # not all 0/3/6/9; never call two-point prechecks robust PASS.
+                    decision = "PRECHECK"
             item = {"candidate": expected, "method": method, "status": decision,
                     "source_file": str(file), "protocol": protocol}
             # Prefer genuine 4-hydration robustness or improved convergence runs.
@@ -318,11 +324,21 @@ def ingest_cache(path):
             continue
         c, m = obj.get("candidate"), obj.get("method")
         if c and m in {"gfn1", "aimnet"}:
+            counts = obj.get("valid_pairs", [])
+            controls = obj.get("control_valid_pairs", [])
+            shift = obj.get("hydration_shift_eV")
+            robust = (obj.get("full_robust") is True
+                      and obj.get("hydration_points") == [0, 3, 6, 9]
+                      and obj.get("trials", 0) >= 3
+                      and len(counts) == 4 and len(controls) == 4
+                      and min(counts) >= 2 and min(controls) >= 2
+                      and shift is not None and shift > 0)
+            status = ("PASS" if robust and obj.get("status") == "PASS"
+                      else "PRECHECK" if obj.get("status") == "PASS" else "HOLD")
             item = {"candidate": c, "method": m,
-                    "status": ("PASS" if obj.get("full_robust") and obj.get("status") == "PASS"
-                               else "PRECHECK" if obj.get("status") == "PASS"
-                               else obj.get("status", "HOLD")),
-                    "source_file": str(file), "protocol": "v4-fast-precheck"}
+                    "status": status, "source_file": str(file),
+                    "protocol": "v4-full-four-hydration" if robust else "v4-incomplete"}
+
             if (c, m) not in out or out[(c, m)]["status"] not in {"PASS"}:
                 out[(c, m)] = item
     return out
@@ -412,37 +428,61 @@ def plan(args):
 def finalize(args):
     plan_data = json.loads(Path(args.plan).read_text(encoding="utf-8"))
     cache = ingest_cache(args.cache)
+    included = set(plan_data.get("scientific_shortlist", []))
     rows = []
     for c in plan_data["strict_gate"]:
         checks = {m: cache.get((c["candidate"], m), {"status": "MISSING"})
                   for m in ("gfn1", "aimnet")}
-        # Only full robustness evidence is sufficient to call a domain result
-        # a computational-review candidate; lab validation remains mandatory.
-        eligible = (c["strict_ml_pass"] and checks["gfn1"]["status"] == "PASS"
-                    and checks["aimnet"]["status"] == "PASS")
-        rows.append({"candidate": c["candidate"], "strict_ml_pass": c["strict_ml_pass"],
+        gates = {k: c.get("gate_"+k, "HOLD") for k in "ABCD"}
+        eligible = (c["candidate"] in included and
+                    all(gates[k] == "PASS" for k in "ABC") and
+                    gates["D"] == "PASS_TO_PHYSICS" and
+                    checks["gfn1"]["status"] == "PASS" and
+                    checks["aimnet"]["status"] == "PASS")
+        rows.append({"candidate": c["candidate"],
+                     "scientific_gates": gates,
+                     "active_learning_reason": c.get("acquisition_reason"),
+                     "literature_and_feasibility": c.get("feasibility", {}),
+                     "strict_mean_swing": c.get("strict_mean_swing"),
+                     "strict_uncertainty": c.get("strict_sd"),
+                     "ood_proxy": c.get("ood_proxy"),
                      "gfn1": checks["gfn1"], "aimnet": checks["aimnet"],
                      "computer_review_ready": bool(eligible),
-                     "status": "COMPUTATIONAL_REVIEW_ONLY" if eligible else "HOLD_EVIDENCE"})
-    summary = {"engine": "chemistry-discovery-v4", "domain": "co2_moisture_swing",
-               "virtual_configurations_scored": json.loads(Path(args.discovery).read_text())["virtual_configurations_scored"],
-               "computer_review_ready": [x["candidate"] for x in rows if x["computer_review_ready"]],
-               "candidates": rows, "guardrail": GUARDRAIL,
-               "next": "External chemistry/feasibility review, then measured lab adsorption and cycling."}
+                     "status": "COMPUTATIONAL_REVIEW_ONLY" if eligible
+                               else "HOLD_SCIENTIFIC_GATES"})
+    discovery = json.loads(Path(args.discovery).read_text())
+    summary = {
+        "engine": "chemistry-discovery-v4", "domain": "co2_moisture_swing",
+        "virtual_configurations_scored": discovery["virtual_configurations_scored"],
+        "stage_counts": plan_data.get("stage_counts", {}),
+        "gate_A_grouped_baseline": plan_data.get("gate_A_grouped_baseline", {}),
+        "gate_C_active_learning": plan_data.get("gate_C_active_learning", {}),
+        "computed_review_ready": [x["candidate"] for x in rows
+                                  if x["computer_review_ready"]],
+        "candidates": rows, "guardrail": GUARDRAIL,
+        "lab_validated_candidates": [],
+        "next": "Human lab/feasibility review and measured uptake, kinetics, cycles and controls.",
+    }
     write_json(args.output, summary)
-    md = ["# Chemistry Discovery V4 — CO2 adapter", "",
-          f"Virtual configurations evaluated (cheap ML): {summary['virtual_configurations_scored']:,}",
-          "This is screening, NOT experimental discovery.", "",
-          "| Candidate | strict ML | GFN1 | AIMNet2 | Decision |",
-          "|---|---|---|---|---|"]
-    for r in rows:
-        md.append(f"| {r['candidate']} | {r['strict_ml_pass']} | {r['gfn1']['status']} | "
-                  f"{r['aimnet']['status']} | {r['status']} |")
-    md += ["", GUARDRAIL, "", "External chemical feasibility and lab testing remain required."]
-    Path(args.markdown).parent.mkdir(parents=True, exist_ok=True)
-    Path(args.markdown).write_text("\n".join(md) + "\n", encoding="utf-8")
-    print("REVIEW_READY", len(summary["computer_review_ready"]))
-
+    md = ["# Chemistry Discovery V4 — evidence-first CO2 scientific gate report",
+          "", f"Virtual configurations evaluated: {summary['virtual_configurations_scored']:,}",
+          f"Staged funnel (observed counts): {summary['stage_counts']}",
+          f"Grouped baseline gate A: {summary['gate_A_grouped_baseline'].get('status', 'UNKNOWN')}",
+          "", "**No computational status equals experimental validation.**", "",
+          "| Candidate | A | B | C | D | GFN1 | NVIDIA ALCHEMI | Decision |",
+          "|---|---|---|---|---|---|---|---|"]
+    for row in rows:
+        g = row["scientific_gates"]
+        md.append(f"| {row['candidate']} | {g['A']} | {g['B']} | "
+                  f"{g['C']} | {g['D']} | {row['gfn1']['status']} | "
+                  f"{row['aimnet']['status']} | {row['status']} |")
+    md.extend(["", GUARDRAIL,
+               "", "Every material remains unvalidated until a partner lab measures it."])
+    out_md = Path(args.markdown)
+    out_md.parent.mkdir(parents=True, exist_ok=True)
+    out_md.write_text("\n".join(md)+"\n", encoding="utf-8")
+    print("COMPUTATIONAL_REVIEW_READY", len(summary["computed_review_ready"]))
+    
 
 def main():
     p = argparse.ArgumentParser()
