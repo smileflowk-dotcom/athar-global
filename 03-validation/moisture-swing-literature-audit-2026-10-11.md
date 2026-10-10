@@ -20,6 +20,7 @@ The scope/claims above are recorded separately in `chemistry/v4/literature/curat
 
 - The discovery proposition is **better pair selection, robust protocol and costly-experiment reduction**, not rediscovery of phosphate/pyrophosphate.
 - Reuse the existing MSA-ML dataset for baseline reproduction, but evaluate against truly separate future lab experiments before independent external-validation claims.
+- **Legal check (11 October 2026):** the public `PYU-pub/MSA-ML` GitHub repository exposes no declared GitHub repository license and no LICENSE file in its root listing; the README does not specify dataset redistribution rights. The ACS article's CC BY 4.0 applies to the publication, not automatically to the separately published GitHub workbook/code. Keep an explicit `DATA_REUSE_PERMISSION_PENDING` gate for commercial dataset redistribution or licensing.
 - Use matched carbonate controls and compare *moisture-swing working capacity*, adsorption/desorption kinetics, loading-normalized and mass-normalized metrics separately.
 - Type I IRA900, Type II IRA910 and weak-base variants must have *chemically faithful* different local atomistic models.
 - Retain QMPR and other unreviewed pair hypotheses in HOLD pending named manufacturer/molecular evidence.
