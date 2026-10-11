@@ -49,6 +49,32 @@ class CacheGateTests(unittest.TestCase):
             got = ingest_cache(d)[("QMPR-1__H2PO4^-", "aimnet")]
             self.assertEqual(got["status"], "PASS")
 
+    def test_two_same_named_physics_artifacts_both_survive_final_ingest(self):
+        """Each matrix artifact contains v4-robust-result.json with identical
+        basename; keep artifact directories separate and retain both methods.
+        """
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d) / "new"
+            for sub, method, status, counts, shift in [
+                ("v4-physics-0", "aimnet", "PASS", [3, 3, 3, 3], .66015625),
+                ("v4-physics-1", "gfn1", "HOLD", [3, 1, 0, 0], None),
+            ]:
+                folder = root / sub
+                folder.mkdir(parents=True)
+                write_json(folder / "v4-robust-result.json", {
+                    "candidate": "IRA900__PO4^3-", "method": method,
+                    "full_robust": True, "status": status,
+                    "hydration_points": [0, 3, 6, 9], "trials": 3,
+                    "valid_pairs": counts,
+                    "control_valid_pairs": [3, 3, 2, 3],
+                    "hydration_shift_eV": shift})
+            got = ingest_cache(d)
+            self.assertEqual(got[("IRA900__PO4^3-", "aimnet")]["status"], "PASS")
+            self.assertEqual(got[("IRA900__PO4^3-", "gfn1")]["status"], "HOLD")
+            self.assertNotEqual(
+                got[("IRA900__PO4^3-", "aimnet")]["source_file"],
+                got[("IRA900__PO4^3-", "gfn1")]["source_file"])
+
     def test_wrong_candidate_cannot_be_reused(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d) / "v1-0"
