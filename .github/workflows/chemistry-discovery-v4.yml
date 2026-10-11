@@ -228,7 +228,7 @@ jobs:
         with:
           pattern: v4-physics-*
           path: chemistry/v4/cache/new
-          merge-multiple: true
+          merge-multiple: false
         continue-on-error: true
       - uses: actions/download-artifact@v4
         with:
