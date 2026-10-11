@@ -1,0 +1,68 @@
+name: GFN1 V4 targeted convergence diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/v4-gfn1-convergence-diagnostics]
+    paths:
+      - ".github/workflows/gfn1-v4-targeted-diagnostic.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gfn1-v4-targeted-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile and verify bounded generated GFN1 protocol
+        run: |
+          python -m py_compile chemistry/v4/gfn1_diagnostic.py
+          python chemistry/v4/gfn1_diagnostic.py --preflight
+
+  probe:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      OMP_NUM_THREADS: "2"
+      OPENBLAS_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install independent GFN1 stack (no Docker or AIMNet repeat)
+        run: pip install numpy ase rdkit tblite
+      - name: Save reproducible package versions
+        run: |
+          mkdir -p 03-validation/gfn1-targeted
+          python --version > 03-validation/gfn1-targeted/python-version.txt
+          pip freeze > 03-validation/gfn1-targeted/dependencies.txt
+      - name: Targeted 3/6/9 hydration convergence + matched carbonate
+        run: python chemistry/v4/gfn1_diagnostic.py
+      - name: Preserve full independent audit trail
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gfn1-v4-targeted-diagnostic
+          path: 03-validation/gfn1-targeted/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Summarize diagnostic (not scientific PASS)
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f 03-validation/gfn1-targeted/diagnostic.md ]]; then
+            cat 03-validation/gfn1-targeted/diagnostic.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Targeted probe failed; see preserved solver log (no promotion)." >> "$GITHUB_STEP_SUMMARY"
+          fi
