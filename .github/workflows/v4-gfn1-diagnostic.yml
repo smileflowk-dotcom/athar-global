@@ -1,0 +1,45 @@
+name: V4 targeted GFN1 convergence diagnostic
+
+on:
+  push:
+    branches: [diagnostic/v4-po4-gfn1-convergence]
+    paths:
+      - "chemistry/v4/gfn1_diagnostic.py"
+      - "chemistry/v4/test_gfn1_diagnostic.py"
+      - ".github/workflows/v4-gfn1-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v4-gfn1-diagnostic-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bounded-po4-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      PYTHONPATH: .
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Strict offline generation and no-promotion tests
+        run: python -m unittest chemistry.v4.test_gfn1_diagnostic -v
+      - name: Install only the independent GFN1 CPU stack
+        run: pip install numpy ase rdkit tblite
+      - name: Diagnose PO4 target at 3/6/9 waters with unchanged force gate
+        run: python -m chemistry.v4.gfn1_diagnostic
+      - name: Preserve raw per-state results and progress even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-po4-gfn1-diagnostic-only
+          path: chemistry/v4/diagnostics/gfn1-po4-3-6-9/
+          if-no-files-found: error
+          retention-days: 30
