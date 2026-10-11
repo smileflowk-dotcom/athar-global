@@ -5,6 +5,8 @@ on:
     branches: [research/lab-20-portfolio-v1]
     paths:
       - scripts/prepare_lab20_v1.py
+      - scripts/audit_lab20_robust_v2.py
+      - chemistry/v4/test_lab20_robust.py
       - chemistry/v4/test_lab20_portfolio.py
       - .github/workflows/lab20-portfolio-v1.yml
   workflow_dispatch:
@@ -58,6 +60,21 @@ jobs:
           assert not r["new_training"] and not r["new_gfn1_or_aimnet"]
           print("CHECKED",r["proposals"],"distinct scientific proposals; lab-ready",r["lab_ready_count"])
           PY
+      - name: Validate original independent GFN1 gates (no changed thresholds)
+        run: python -m unittest chemistry/v4/test_lab20_robust.py
+      - name: Reuse prior independent GFN1 0/3/6/9 matched carbonate evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p lab20/input/gfn1
+          gh run download 38178738781 --repo "$GITHUB_REPOSITORY" \
+            --name v4-gfn1-dry-independent-closure-no-promotion \
+            --dir lab20/input/gfn1
+          test -s lab20/input/gfn1/gfn1-dry-closure/decision.json
+          test -s lab20/input/gfn1/gfn1-dry-closure/merged-raw-rows.json
+      - name: Preserve scientific A/B/C/D and raw independent GFN1 gates for all 20
+        run: python scripts/audit_lab20_robust_v2.py
       - name: Keep 20 packets, source provenance, and audit trail
         if: always()
         uses: actions/upload-artifact@v4
@@ -65,6 +82,9 @@ jobs:
           name: athar-v4-20-lab-proposals-not-validated
           path: |
             lab20/output/
+            lab20/robust-v2/
+            lab20/input/gfn1/gfn1-dry-closure/decision.json
+            lab20/input/gfn1/gfn1-dry-closure/merged-raw-rows.json
             lab20/input/discovery/discovery.json
             lab20/input/discovery/gate-100.csv
             lab20/input/plan/plan.json
@@ -74,7 +94,9 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [[ -f lab20/output/SUMMARY.md ]]; then
+          if [[ -f lab20/robust-v2/README.md ]]; then
+            cat lab20/robust-v2/README.md >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -f lab20/output/SUMMARY.md ]]; then
             cat lab20/output/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
           else
             echo 'Insufficient trusted evidence: review failed; no fabricated 20 dossiers.' >> "$GITHUB_STEP_SUMMARY"
