@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -136,7 +137,9 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         entry = Path(tmp) / "run.py"
         entry.write_text(src, encoding="utf-8")
-        result = subprocess.run([sys.executable, str(entry)], check=False)
+        env = os.environ.copy()
+        env.update({"CANDIDATE": CANDIDATE, "METHOD": "gfn1"})
+        result = subprocess.run([sys.executable, str(entry)], env=env, check=False)
     if result.returncode:
         (OUTPUT / "execution-failure.json").write_text(json.dumps(
             {"returncode": result.returncode, "source_sha256": sha}, indent=2) + "\n")
