@@ -35,7 +35,11 @@ def diagnostic_source() -> tuple[str, Path]:
         raise RuntimeError("Wrong target ion")
     if src.count("for nw in [0,3,6,9]:") != 2:
         raise RuntimeError("Expected one sweep and one summary hydration loop")
-    src = once(src, 'for testion in ["CO3^2-",ion]:', 'for testion in [ion]:')
+    # The target/control loop is present in both execution and summary blocks.
+    old_ions = 'for testion in ["CO3^2-",ion]:'
+    if src.count(old_ions) != 2:
+        raise RuntimeError("Upstream target/control source shape changed")
+    src = src.replace(old_ions, 'for testion in [ion]:')
     src = once(src,
         'for nw in [0,3,6,9]:\n    for trial in [0,1,2]:',
         'for nw in [3,6,9]:\n    for trial in [0,1,2]:')
