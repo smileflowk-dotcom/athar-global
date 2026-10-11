@@ -51,16 +51,22 @@ def diagnostic_source() -> tuple[str, Path]:
         '        FIRE(a,logfile=None,dt=.05,maxstep=.10).run(fmax=.30,steps=120)',
         '        opt=FIRE(a,logfile=None,dt=.05,maxstep=.10)\n'
         '        converged=bool(opt.run(fmax=.30,steps=240))')
-    src = once(src,
-        '        return {"ok":bool(np.isfinite(e) and np.isfinite(fm) and fm<=.40),"e":e,"fmax":fm}',
+    # The generated V1 source also contains an unused AIMNet function with
+    # the same return expression. Instrument only the first (GFN1) occurrence.
+    old_return = '        return {"ok":bool(np.isfinite(e) and np.isfinite(fm) and fm<=.40),"e":e,"fmax":fm}'
+    if src.count(old_return) != 2:
+        raise RuntimeError("Expected distinct GFN1 and AIMNet return sites")
+    src = src.replace(old_return,
         '        finite=bool(np.isfinite(e) and np.isfinite(fm))\n'
         '        ok=bool(finite and fm<=.40)\n'
         '        return {"ok":ok,"e":e if finite else None,"fmax":fm if finite else None,'
         '"optimizer_converged":converged,"optimizer_steps":int(opt.nsteps),'
-        '"failure_reason":None if ok else ("NONFINITE" if not finite else "FMAX_GT_0.40")}')
-    src = once(src,
-        '        return {"ok":False,"error":str(ex)}',
-        '        return {"ok":False,"error":str(ex),"failure_reason":"EXCEPTION"}')
+        '"failure_reason":None if ok else ("NONFINITE" if not finite else "FMAX_GT_0.40")}', 1)
+    old_exception = '        return {"ok":False,"error":str(ex)}'
+    if src.count(old_exception) != 2:
+        raise RuntimeError("Expected distinct GFN1 and AIMNet exception handlers")
+    src = src.replace(old_exception,
+        '        return {"ok":False,"error":str(ex),"failure_reason":"EXCEPTION"}', 1)
     src = once(src,
         '        pair[state]=runner(testion,nw,trial,state)',
         '        pair[state]=runner(testion,nw,trial,state)\n'
