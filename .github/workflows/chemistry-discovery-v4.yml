@@ -19,7 +19,7 @@ on:
         default: '2'
         type: string
   push:
-    branches: [main, fix/v4-phosphate-readiness]
+    branches: [main, fix/v4-independent-evidence-collection]
     paths:
       - "chemistry/v4/**"
       - ".github/workflows/chemistry-discovery-v4.yml"
