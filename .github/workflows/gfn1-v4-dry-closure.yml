@@ -1,0 +1,67 @@
+name: GFN1 V4 dry-state independent closure (targeted only)
+
+on:
+  push:
+    branches: [fix/v4-gfn1-dry-independent-closure]
+    paths:
+      - .github/workflows/gfn1-v4-dry-closure.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: gfn1-v4-dry-closure-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  dry-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Preflight original force gate and compile bounded dry source
+        run: python scripts/gfn1_v4_dry_closure.py --preflight
+      - name: Reuse existing validated 3/6/9 H2O diagnostic + matched carbonate
+        shell: bash
+        run: |
+          mkdir -p 03-validation/gfn1-dry-closure/reused
+          gh run download 38175588297 --repo "${GITHUB_REPOSITORY}" \
+            --name gfn1-v4-targeted-diagnostic \
+            --dir 03-validation/gfn1-dry-closure/reused
+          test -s 03-validation/gfn1-dry-closure/reused/diagnostic.json
+          test -s 03-validation/gfn1-dry-closure/reused/raw-rows.json
+          test -s 03-validation/gfn1-dry-closure/reused/dependencies.txt
+      - name: Install identical independent GFN1 CPU stack (no Docker, no AIMNet2)
+        run: |
+          pip install 'numpy==2.5.4' 'ase==3.29.0' 'rdkit==2026.9.1' 'tblite==0.7.0'
+          pip freeze > 03-validation/gfn1-dry-closure/new-dependencies.txt
+      - name: Run ONLY missing 0 H2O target and carbonate paired seeds
+        run: python scripts/gfn1_v4_dry_closure.py --run
+      - name: Verify full independent pairs + median shift, no automatic promotion
+        run: python scripts/gfn1_v4_dry_closure.py --finalize
+      - name: Preserve complete raw diagnostics and reused input (90 days)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-gfn1-dry-independent-closure-no-promotion
+          retention-days: 90
+          if-no-files-found: warn
+          path: |
+            03-validation/gfn1-dry-closure/
+            03-validation/gfn1-v4-independent-closure-protocol.md
+      - name: GitHub summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f 03-validation/gfn1-dry-closure/decision.md ]]; then
+            cat 03-validation/gfn1-dry-closure/decision.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Dry-only verification did not complete: HOLD. Review uploaded partial logs." >> "$GITHUB_STEP_SUMMARY"
+          fi
