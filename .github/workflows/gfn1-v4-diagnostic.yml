@@ -1,0 +1,42 @@
+name: Chemistry V4 GFN1 Phosphate Diagnosis (bounded)
+
+on:
+  push:
+    branches: [fix/v4-gfn1-diagnostics]
+    paths:
+      - scripts/gfn1_v4_diagnostic.py
+      - .github/workflows/gfn1-v4-diagnostic.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v4-gfn1-diagnostic-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check unchanged historical GFN1 source and force gates
+        run: python scripts/gfn1_v4_diagnostic.py --self-test
+      - name: Install independent GFN1 packages (CPU only)
+        run: pip install numpy ase rdkit tblite
+      - name: Replay only target PO4 3/6/9 H2O, trial 0
+        run: python scripts/gfn1_v4_diagnostic.py --trials 0
+      - name: Preserve per-state force and error diagnostics (not a physics PASS)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v4-gfn1-phosphate-diagnostic-only
+          path: |
+            chemistry/v4/diagnostics/*.json
+            chemistry/v4/diagnostics/*.log
+          retention-days: 90
+          if-no-files-found: warn
