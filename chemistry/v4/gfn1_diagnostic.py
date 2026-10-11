@@ -69,7 +69,7 @@ def instrument_existing_source(candidate):
     source = replace_exact(source, old, new)
     source = replace_exact(
         source, 'return {"ok":False,"error":str(ex)}',
-        'return {"ok":False,"error":str(ex),"reason":"calculator_or_optimizer_exception"}'
+        'return {"ok":False,"error":str(ex),"reason":"calculator_or_optimizer_exception"}', 2
     )
     compile(source, "gfn1_targeted_instrumented.py", "exec")
     return source, report
