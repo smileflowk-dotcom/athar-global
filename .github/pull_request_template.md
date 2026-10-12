@@ -6,4 +6,4 @@
 - [ ] Science claims differentiate simulation proxies, independent computational checks and actual lab measurements.
 - [ ] Potential patentable content has had prior-art and release review before disclosure.
 
-Reference: [Publication and IP safety](../../docs/PUBLICATION-AND-IP-SAFETY.md).
+Reference: [Publication and IP safety](https://github.com/smileflowk-dotcom/athar-global/blob/main/docs/PUBLICATION-AND-IP-SAFETY.md).
