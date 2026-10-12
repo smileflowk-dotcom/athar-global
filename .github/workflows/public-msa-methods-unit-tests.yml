@@ -1,0 +1,29 @@
+name: ATHAR Public Methods Comparison - Synthetic Tests Only
+
+on:
+  push:
+    branches: [research/public-methods-benchmark-2026-10-12]
+    paths:
+      - 'scripts/public_msa_methods_benchmark_v1.py'
+      - 'scripts/test_public_msa_methods_benchmark_v1.py'
+      - '.github/workflows/public-msa-methods-unit-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install scientific regression dependencies
+        run: pip install numpy pandas scikit-learn lightgbm openpyxl
+      - name: Run synthetic-only safety regression tests
+        run: python scripts/test_public_msa_methods_benchmark_v1.py
+      - name: Verify disclosure restriction
+        run: echo 'Synthetic-only unit test. No real MSA workbook downloaded, and no unpublished research results published.' >> "$GITHUB_STEP_SUMMARY"
