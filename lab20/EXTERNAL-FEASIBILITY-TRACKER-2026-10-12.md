@@ -15,13 +15,13 @@ Date: 2026-10-12. Goal: obtain *external* confirmation of the preparation/identi
 
 | Organization | Actual request | Status on 2026-10-12 | Evidence source |
 |---|---|---|---|
-| Max Planck Institute for Dynamics of Complex Technical Systems (Magdeburg); Dr Peter Schulze | Lab capability to prepare/analyze ions and CO₂ breakthrough/cycling, and feasibility of 2–3 benchmarks → 20 | **EMAIL_SENT via connected Gmail, awaiting reply** | [Max Planck researcher](https://www.mpi-magdeburg.mpg.de/person/26707/3011); his 2025 experiment [DOI](https://doi.org/10.1016/j.cej.2025.163024) |
+| Max Planck Institute for Dynamics of Complex Technical Systems (Magdeburg); Dr Peter Schulze | Lab capability to prepare/analyze ions and CO₂ breakthrough/cycling, and feasibility of 2–3 benchmarks → 20 | **BOUNCED 550 5.1.1 (User unknown in relay recipient table); NOT DELIVERED; fallback needed** | [Max Planck researcher](https://www.mpi-magdeburg.mpg.de/person/26707/3011); his 2025 experiment [DOI](https://doi.org/10.1016/j.cej.2025.163024) |
 | Jiangsu Suqing Water Treatment Engineering Group | D201 exact grade, functional group, capacity, batch specifications, chloride form, seven test anions, stability, samples and price France | **EMAIL_SENT via connected Gmail, awaiting reply** | [Manufacturer's D201 listing](https://www.suqingresin.com/D201-pd708685188.html) |
 | Northwestern / Prof Vinayak Dravid | Previous 2026-10-07 screening interest email | **PREVIOUSLY_CONTACTED; NO REPLY OBSERVED in Gmail as of 2026-10-12** | [Experimental 2023 paper](https://doi.org/10.1021/acs.est.3c02543); [2026 paper](https://doi.org/10.1021/acs.est.5c16820) |
 | Georgia Tech / Prof Ryan Lively | Previous 2026-10-07 screening interest email | **PREVIOUSLY_CONTACTED; NO REPLY OBSERVED in Gmail as of 2026-10-12** | [IRA900 moisture-swing breakthrough study](https://doi.org/10.1021/acssuschemeng.5c00227) |
 | UT Austin / Prof Benny Freeman | Previous 2026-10-07 screening interest email | **PREVIOUSLY_CONTACTED; NO REPLY OBSERVED in Gmail as of 2026-10-12** | [Isotherm/kinetics methodology](https://doi.org/10.1021/acs.est.5c11862) |
 
-*AgentMail CO₂ sender did not send the two new requests because the organization first-week 25-new-recipient cap was exhausted. We used previously authorized connected Gmail instead and confirmed both were accepted by Gmail. This is an outbound-delivery status, not proof the recipient received, read, replied or approved anything.*
+*AgentMail CO₂ sender did not send the two new requests because the organization first-week 25-new-recipient cap was exhausted. We used connected Gmail. **Gmail subsequently returned a hard bounce for Peter Schulze, 550 5.1.1 User unknown in relay recipient table; therefore NOT delivered**. The Suqing vendor email was accepted for sending but no confirmed reply. The address remains displayed in historical/current MPI profile/papers, but the institute's mail server rejected it. The MPI official general route is [info@mpi-magdeburg.mpg.de](https://www.mpi-magdeburg.mpg.de/contactingmpi), **not yet contacted via that alternative**. No lab or vendor approval should be inferred.*
 
 ## Individual qualification decision (same for every one of 20)
 
@@ -55,5 +55,5 @@ Every candidate starts as **READY_TO_REQUEST_LAB_FEASIBILITY_REVIEW**. This is N
 
 - **20/20** distinct formulation *questions* and conceptual analytical protocols exist.
 - **3** commercial parent resin product families have documented public supplier/manufacturer evidence; **0/20** batch/modified form identities independently verified.
-- **2** fresh external inquiries sent, replies/acceptances **0** as at record date.
+- **2** fresh inquiries initiated, **1** accepted for delivery by Gmail (vendor; final delivery unconfirmed), **1** hard bounce (Max Planck), and **0** substantive replies confirmed.
 - **0** paid tests or laboratory arrangements commissioned.
