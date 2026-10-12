@@ -6,6 +6,8 @@ on:
     paths:
       - scripts/prepare_lab20_v1.py
       - scripts/audit_lab20_robust_v2.py
+      - scripts/lab20_feasibility_v3.py
+      - chemistry/v4/test_lab20_feasibility_v3.py
       - chemistry/v4/test_lab20_robust.py
       - chemistry/v4/test_lab20_portfolio.py
       - .github/workflows/lab20-portfolio-v1.yml
@@ -75,6 +77,10 @@ jobs:
           test -s lab20/input/gfn1/gfn1-dry-closure/merged-raw-rows.json
       - name: Preserve scientific A/B/C/D and raw independent GFN1 gates for all 20
         run: python scripts/audit_lab20_robust_v2.py
+      - name: Validate lab feasibility / seed-specific scientific HOLD
+        run: python -m unittest chemistry/v4/test_lab20_feasibility_v3.py
+      - name: Assemble 20 separately falsifiable preparation and CO2 test plans
+        run: python scripts/lab20_feasibility_v3.py
       - name: Keep 20 packets, source provenance, and audit trail
         if: always()
         uses: actions/upload-artifact@v4
@@ -83,6 +89,7 @@ jobs:
           path: |
             lab20/output/
             lab20/robust-v2/
+            lab20/feasibility-v3/
             lab20/input/gfn1/gfn1-dry-closure/decision.json
             lab20/input/gfn1/gfn1-dry-closure/merged-raw-rows.json
             lab20/input/discovery/discovery.json
@@ -94,7 +101,9 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [[ -f lab20/robust-v2/README.md ]]; then
+          if [[ -f lab20/feasibility-v3/README.md ]]; then
+            cat lab20/feasibility-v3/README.md >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -f lab20/robust-v2/README.md ]]; then
             cat lab20/robust-v2/README.md >> "$GITHUB_STEP_SUMMARY"
           elif [[ -f lab20/output/SUMMARY.md ]]; then
             cat lab20/output/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
