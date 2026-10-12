@@ -1,0 +1,112 @@
+name: ATHAR V4 20-lab-proposals (one command)
+
+on:
+  push:
+    branches: [research/lab-20-portfolio-v1]
+    paths:
+      - scripts/prepare_lab20_v1.py
+      - scripts/audit_lab20_robust_v2.py
+      - scripts/lab20_feasibility_v3.py
+      - chemistry/v4/test_lab20_feasibility_v3.py
+      - chemistry/v4/test_lab20_robust.py
+      - chemistry/v4/test_lab20_portfolio.py
+      - .github/workflows/lab20-portfolio-v1.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: lab20-v1-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  propose-20:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install only cheap chemical/provenance checks
+        run: pip install numpy pandas rdkit
+      - name: Prevent false 20-candidate and chemical-charge claims
+        run: python chemistry/v4/test_lab20_portfolio.py
+      - name: Reuse V4's prior data and model screen, no recomputation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p lab20/input/discovery lab20/input/plan
+          gh run download 38095586192 --repo "$GITHUB_REPOSITORY" \
+            --name v4-discovery --dir lab20/input/discovery
+          gh run download 38095586192 --repo "$GITHUB_REPOSITORY" \
+            --name v4-plan --dir lab20/input/plan
+          test -s lab20/input/discovery/discovery.json
+          test -s lab20/input/discovery/gate-100.csv
+          test -s lab20/input/plan/plan.json
+      - name: Generate 20 distinct auditable resin-counterion lab discussion packets
+        run: python scripts/prepare_lab20_v1.py --target 20 --out lab20/output
+      - name: Scientific no-promotion audit and integrity checks
+        run: |
+          python - <<'PY'
+          import json,pathlib
+          p=pathlib.Path("lab20/output")
+          r=json.loads((p/"portfolio.json").read_text())
+          assert r["proposals"]>=20, "Not enough real chemistry hypotheses"
+          assert len({x["candidate_id"] for x in r["candidates"]})==r["proposals"]
+          assert all(not x["lab_ready"] and not x["scientifically_confirmed"] for x in r["candidates"])
+          assert len(list((p/"lab-discussion-briefs").glob("candidate-*.md")))==r["proposals"]
+          assert not r["new_training"] and not r["new_gfn1_or_aimnet"]
+          print("CHECKED",r["proposals"],"distinct scientific proposals; lab-ready",r["lab_ready_count"])
+          PY
+      - name: Validate original independent GFN1 gates (no changed thresholds)
+        run: python -m unittest chemistry/v4/test_lab20_robust.py
+      - name: Reuse prior independent GFN1 0/3/6/9 matched carbonate evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p lab20/input/gfn1
+          gh run download 38178738781 --repo "$GITHUB_REPOSITORY" \
+            --name v4-gfn1-dry-independent-closure-no-promotion \
+            --dir lab20/input/gfn1
+          test -s lab20/input/gfn1/gfn1-dry-closure/decision.json
+          test -s lab20/input/gfn1/gfn1-dry-closure/merged-raw-rows.json
+      - name: Preserve scientific A/B/C/D and raw independent GFN1 gates for all 20
+        run: python scripts/audit_lab20_robust_v2.py
+      - name: Validate lab feasibility / seed-specific scientific HOLD
+        run: python -m unittest chemistry/v4/test_lab20_feasibility_v3.py
+      - name: Assemble 20 separately falsifiable preparation and CO2 test plans
+        run: python scripts/lab20_feasibility_v3.py
+      - name: Keep 20 packets, source provenance, and audit trail
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: athar-v4-20-lab-proposals-not-validated
+          path: |
+            lab20/output/
+            lab20/robust-v2/
+            lab20/feasibility-v3/
+            lab20/input/gfn1/gfn1-dry-closure/decision.json
+            lab20/input/gfn1/gfn1-dry-closure/merged-raw-rows.json
+            lab20/input/discovery/discovery.json
+            lab20/input/discovery/gate-100.csv
+            lab20/input/plan/plan.json
+          retention-days: 90
+          if-no-files-found: warn
+      - name: Display realistic readiness status
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f lab20/feasibility-v3/README.md ]]; then
+            cat lab20/feasibility-v3/README.md >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -f lab20/robust-v2/README.md ]]; then
+            cat lab20/robust-v2/README.md >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -f lab20/output/SUMMARY.md ]]; then
+            cat lab20/output/SUMMARY.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Insufficient trusted evidence: review failed; no fabricated 20 dossiers.' >> "$GITHUB_STEP_SUMMARY"
+          fi
